@@ -7,8 +7,16 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.notnex.myday.ui.theme.MyDayTheme
+import com.notnex.myday.viewmodel.Screen
 import dagger.hilt.android.AndroidEntryPoint
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @AndroidEntryPoint
 class MainActivity: ComponentActivity() {
@@ -18,9 +26,45 @@ class MainActivity: ComponentActivity() {
         setContent {
             MyDayTheme {
                 Scaffold { innerPadding ->
-                    MainScreen(
-                        modifier = Modifier.padding(innerPadding)
-                    )
+
+                    val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE // или другой формат
+                    val navController = rememberNavController()
+                    NavHost(
+                        navController = navController,
+                        startDestination = Screen.MainScreen.route
+                    ) {
+                        composable(
+                            route = Screen.MainScreen.route
+                        ) {
+                            MainScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                navController = navController
+                            )
+                        }
+                        composable(
+                            route = Screen.DayNote.route + "/{date}/{currentRating}",
+                            arguments = listOf(
+                                navArgument("date") {
+                                    type = NavType.StringType
+                                    nullable = true
+                                },
+                                navArgument("currentRating") {
+                                    type = NavType.FloatType
+                                    nullable = false
+                                }
+                            )
+                        ) { entry ->
+                            val dateString = entry.arguments?.getString("date")
+                            val date = dateString.let { LocalDate.parse(it, dateFormatter) }
+                            val currentRating = entry.arguments?.getFloat("currentRating")?.toDouble() ?: 0.0
+
+                            DayNote(
+                                navController = navController,
+                                date = date,
+                                currentRating = currentRating
+                            )
+                        }
+                    }
                 }
             }
         }

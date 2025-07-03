@@ -27,8 +27,6 @@ android {
         }
     }
 
-
-
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -51,6 +49,7 @@ android {
     buildFeatures {
         compose = true
     }
+    buildToolsVersion = "36.0.0"
 }
 
 dependencies {
@@ -84,5 +83,5 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.material.icons.extended)
 
-    implementation(libs.androidx.core.splashscreen)
+    implementation(libs.androidx.navigation.compose)
 }
