@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">MyDay</string>
+    <string name="write_something">Напишите что-нибудь...</string>
 </resources>

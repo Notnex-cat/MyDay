@@ -96,8 +96,8 @@ fun MainScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     weekDates.forEach { date ->
-                        val isSelected = date == selectedDate
-                        val isToday = date == LocalDate.now()
+                        val isSelected = date == selectedDate // это такие сложные условия оба
+                        val isToday = date == LocalDate.now() //
 
                         Column(
                             modifier = Modifier
@@ -151,10 +151,9 @@ fun MainScreen(
                         .clickable {
                             navController.navigate("${Screen.DayNote.route}/${selectedDate}/${currentRating}/${text}")
                         }
-
                 ) {
                     Text(
-                        text = text.ifEmpty { "Напишите что-нибудь..." },
+                        text = text.ifEmpty { stringResource(R.string.write_something) },
                         color = if (text.isEmpty()) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(16.dp),
                         maxLines = 10
@@ -174,7 +173,6 @@ fun MainScreen(
                         else -> Color.Red
                     }
                 )
-                //  }
             }
         }
     }
