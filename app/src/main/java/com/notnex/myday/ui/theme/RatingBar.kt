@@ -1,4 +1,4 @@
-package com.notnex.myday.ui
+package com.notnex.myday.ui.theme
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box

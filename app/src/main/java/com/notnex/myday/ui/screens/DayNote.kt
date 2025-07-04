@@ -1,4 +1,4 @@
-package com.notnex.myday.ui
+package com.notnex.myday.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,7 +47,6 @@ fun DayNote(
     date: LocalDate,
     note: String
 ){
-
     var text by remember { mutableStateOf(note) }
 
     val context = LocalContext.current
@@ -85,7 +84,7 @@ fun DayNote(
                     text = it
                     saveJob?.cancel() // отменяем предыдущую задачу
                     saveJob = coroutineScope.launch {
-                        delay(500) // 500 мс после последнего ввода
+                        delay(1000) // 500 мс после последнего ввода
                         viewModel.saveDayEntry(date, currentRating, it)
                     }
                 },
