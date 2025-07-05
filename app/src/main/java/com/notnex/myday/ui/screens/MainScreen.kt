@@ -117,7 +117,7 @@ fun MainScreen(
                             IconButton(onClick = {
                                 val intent = Intent(context, Settings::class.java)
                                 context.startActivity(intent)
-                                //navController.navigate(Screen.Settings.route)
+                                //navController.navigate(Screen.SettingScreen.route)
                             }) {
                                 Icon(Icons.Outlined.AccountCircle, contentDescription = "Account")
                             }

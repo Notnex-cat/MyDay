@@ -1,94 +1,109 @@
 package com.notnex.myday.ui
 
-import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.notnex.myday.R
+import com.google.android.gms.auth.api.identity.Identity
+import com.notnex.myday.firebase.GoogleAuthUiClient
+import com.notnex.myday.ui.screens.SettingsScreen
 import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.MyDayViewModel
+import com.notnex.myday.viewmodel.Screen
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class Settings() : ComponentActivity() {
-    @OptIn(ExperimentalMaterial3Api::class)
+
+    private val googleAuthUiClient by lazy {
+        GoogleAuthUiClient(
+            context = applicationContext,
+            oneTapClient = Identity.getSignInClient(applicationContext)
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val navController = rememberNavController() // если нужен
-            val viewModel: MyDayViewModel = hiltViewModel()
+            val navController = rememberNavController()
 
             MyDayTheme {
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.Companion.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
                 ) {
-                    Scaffold(
-                        topBar = {
-                            TopAppBar(
-                                colors = TopAppBarDefaults.topAppBarColors(
-                                    containerColor = MaterialTheme.colorScheme.background
-                                ),
-                                title = { Text(stringResource(R.string.settings)) },
-                                navigationIcon = {
-                                    IconButton(onClick = {(this as? Activity)?.finish()}) {// завершение активности
-                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    NavHost(
+                        navController = navController,
+                        startDestination = Screen.SettingScreen.route
+                    ) {
+                        composable("settings_screen"){
+                            val viewModel: MyDayViewModel = hiltViewModel()
+                            val state by viewModel.signInState.collectAsStateWithLifecycle()
+
+                            val userData by viewModel.userData.collectAsStateWithLifecycle()
+
+                            //переделать!!!
+                            viewModel.setUserIfSignedIn(
+                                googleAuthUiClient.getSignedInUser()
+                            )
+
+                            val launcher = rememberLauncherForActivityResult(
+                                contract = ActivityResultContracts.StartIntentSenderForResult(),
+                                onResult = { result ->
+                                    if(result.resultCode == RESULT_OK) {
+                                        lifecycleScope.launch {
+                                            val signInResult = googleAuthUiClient.signInWithIntent(
+                                                intent = result.data ?: return@launch
+                                            )
+                                            viewModel.onSignInResult(signInResult)
+                                        }
                                     }
                                 }
                             )
 
-                        },
-
-                        ) { innerPadding ->
-                        Column(modifier = Modifier.padding(innerPadding)) {
-                            ElevatedCard( //аккаунт
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 2.dp
-                                ),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.onTertiary
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                                    .clickable {
-                                        //navController.navigate("${Screen.DayNote.route}/${selectedDate}/${currentRating}/${text}") //преход на полный экран с описанием дня
-                                    }
-                            ) {
-                                Text(
-                                    text = "Account",
-                                    //color = if (text.isEmpty()) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onBackground,
-                                    modifier = Modifier.padding(16.dp),
-                                    maxLines = 10
-                                )
-
+                            LaunchedEffect(key1 = state.isSignInSuccessful) {
+                                if (state.isSignInSuccessful) {
+                                    viewModel.resetState()
+                                }
                             }
+
+                            SettingsScreen(
+                                state = state,
+                                onSignInClick = {
+                                    lifecycleScope.launch {
+                                        val signInIntentSender = googleAuthUiClient.singIn()
+                                        launcher.launch(
+                                            IntentSenderRequest.Builder(
+                                                signInIntentSender ?: return@launch
+                                            ).build()
+                                        )
+                                    }
+                                },
+                                userData = userData,
+                                onSignOut = {
+                                    lifecycleScope.launch {
+                                        googleAuthUiClient.signOut()
+                                        navController.popBackStack()
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -96,4 +111,3 @@ class Settings() : ComponentActivity() {
         }
     }
 }
-
