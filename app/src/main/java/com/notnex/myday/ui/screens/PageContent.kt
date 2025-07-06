@@ -12,6 +12,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -40,8 +41,12 @@ fun PageContent(
 
     val text = note?.note ?: ""
 
+    LaunchedEffect(Unit) {
+        viewModel.subscribeToRealtimeUpdates()
+    }
+
     Column {
-        //Text(text = "$note")
+        Text(text = "$note")
 
         ElevatedCard( // текст о дне
             elevation = CardDefaults.cardElevation(
@@ -84,5 +89,14 @@ fun PageContent(
                 }
             )
         }
+//        Button(
+//            onClick = {
+//                viewModel.getDataFromFirestore()
+//            },
+//            modifier = Modifier
+//                .padding(16.dp)
+//        ) {
+//            Text(text = "get data")
+//        }
     }
 }

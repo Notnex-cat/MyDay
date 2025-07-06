@@ -89,6 +89,7 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.play.services.auth)
     implementation(libs.firebase.database)
+    implementation(libs.firebase.firestore.ktx)
 
     //coil
     debugImplementation(libs.coil.compose)

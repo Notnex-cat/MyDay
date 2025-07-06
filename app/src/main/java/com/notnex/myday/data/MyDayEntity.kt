@@ -6,7 +6,12 @@ import java.time.LocalDate
 
 @Entity(tableName = "day_entries")
 data class MyDayEntity(
-    @PrimaryKey val date: LocalDate,
-    val score: Double,
-    val note: String
+    @PrimaryKey val date: LocalDate = LocalDate.now(),
+    val score: Double = 0.0,
+    val note: String = ""
+)
+data class MyDayFirebaseDTO(
+    val date: String = "",
+    val score: Double = 0.0,
+    val note: String = ""
 )
