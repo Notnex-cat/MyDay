@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,24 +38,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.notnex.myday.R
-import com.notnex.myday.firebase.SignInState
-import com.notnex.myday.firebase.UserData
+import com.notnex.myday.auth.AuthState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("ContextCastToActivity", "SuspiciousIndentation")
 @Composable
 fun SettingsScreen(
-    state: SignInState,
-    onSignInClick: () -> Unit,
-    userData: UserData?,
-    onSignOut: () -> Unit
+    state: AuthState,
+    onSignOut: () -> Unit,
+    navController: NavController
 ){
     val context = LocalContext.current as? Activity
 
-    LaunchedEffect(key1 = state.signInError) {
-        state.signInError?.let { error ->
+    LaunchedEffect(key1 = state.error) {
+        state.error?.let { error ->
             Toast.makeText(
                 context,
                 error,
@@ -72,10 +72,9 @@ fun SettingsScreen(
                 title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        //navController.popBackStack()
                         context?.finish()
                         }
-                    ) {// завершение активности
+                    ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
@@ -84,10 +83,12 @@ fun SettingsScreen(
                 }
             )
         },
-
-        ) { innerPadding ->
+    ) { innerPadding ->
         Column(modifier = Modifier.Companion.padding(innerPadding)) {
-            ElevatedCard( //аккаунт
+            if (state.isLoading) {
+                CircularProgressIndicator()
+            }
+            ElevatedCard(
                 elevation = CardDefaults.cardElevation(
                     defaultElevation = 2.dp
                 ),
@@ -99,45 +100,50 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
                     .clickable {
-                        if (userData == null) {
-                            onSignInClick()
-                        } else {
-                            //преход на какой-нибудь экранчик сделать надо с аккаунтом
+                        if (state.user == null) {
+                            navController.navigate(com.notnex.myday.viewmodel.Screen.Auth.route)
                         }
                     }
             ) {
-                if (userData != null) {
+                if (state.user != null) {
                     Row(
-                       // modifier = Modifier.padding(16.dp),
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                     ) {
-                        userData.profilePictureUrl?.let { url ->
+                        state.user.profilePictureUrl?.let { url ->
                             AsyncImage(
                                 model = url,
                                 contentDescription = "Profile picture",
                                 modifier = Modifier
-                                    .size(70.dp)
+                                    .size(80.dp)
                                     .padding(16.dp)
                                     .clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                         }
-
-                        userData.username?.let { name ->
-                            Text(
-                                text = name,
-                                textAlign = TextAlign.Center,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-
-                            Button(
-                                modifier = Modifier.padding(16.dp),
-                                onClick = onSignOut
-                            ) {
-                                Text(text = "Sign out")
+                        Column {
+                            state.user.username?.let { name ->
+                                Text(
+                                    text = name,
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
                             }
+                            state.user.email?.let { email ->
+                                Text(
+                                    text = email,
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                        }
+                        Button(
+                            modifier = Modifier.padding(16.dp),
+                            onClick = onSignOut
+                        ) {
+                            Text(text = "Sign out")
                         }
                     }
                 } else {

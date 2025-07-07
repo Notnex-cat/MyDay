@@ -3,6 +3,8 @@ package com.notnex.myday.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.notnex.myday.data.MyDayEntity
@@ -12,7 +14,6 @@ import com.notnex.myday.firebase.SignInResult
 import com.notnex.myday.firebase.SignInState
 import com.notnex.myday.firebase.UserData
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -35,17 +35,57 @@ class MyDayViewModel @Inject constructor(
 
     fun getScore(date: LocalDate) = myDayRepository.getScoreByDate(date)
 
+    private val auth = Firebase.auth
+
+    private val fstore = Firebase.firestore
+
     fun saveDayEntry(date: LocalDate, score: Double, note: String) {
         viewModelScope.launch {
+            val uid = auth.currentUser?.uid ?: return@launch
             try {
+                val entity = MyDayEntity(
+                    date = date,
+                    score = score,
+                    note = note,
+                    lastUpdated = System.currentTimeMillis()
+                )
+
+                // 1. Обновляем локально
                 myDayRepository.saveOrUpdateDayScore(date, score, note)
-                _saveResult.value = Result.success(Unit)
-                saveDataToFirestore(MyDayEntity(date = date, score = score, note = note))
+
+                // 2. Подготавливаем DTO
+                val dto = MyDayFirebaseDTO(
+                    date = date.toString(),
+                    score = score,
+                    note = note,
+                    lastUpdated = entity.lastUpdated
+                )
+
+                val docRef = fstore
+                    .collection("users")
+                    .document(uid)
+                    .collection("days")
+                    .document(date.toString()) // используем дату как ID
+
+                // 3. Загружаем текущее облачное состояние (если есть)
+                val snapshot = docRef.get().await()
+                val remote = snapshot.toObject(MyDayFirebaseDTO::class.java)
+
+                // 4. Сравнение по lastUpdated
+                if (remote == null || entity.lastUpdated > remote.lastUpdated) {
+                    docRef.set(dto, SetOptions.merge()).await()
+                    Log.d("Firestore", "Saved to Firestore for user $uid, date $date")
+                } else {
+                    Log.d("Firestore", "Remote data is newer or same, skip upload")
+                }
+
             } catch (e: Exception) {
+                Log.e("Firestore", "Save failed: ${e.message}")
                 _saveResult.value = Result.failure(e)
             }
         }
     }
+
 
 
 
@@ -56,6 +96,7 @@ class MyDayViewModel @Inject constructor(
 
     private val _userData = MutableStateFlow<UserData?>(null)
     val userData: StateFlow<UserData?> = _userData
+
 
 
     fun onSignInResult(result: SignInResult) {
@@ -79,57 +120,37 @@ class MyDayViewModel @Inject constructor(
     }
 
     //Firestore Database
-    private val fstore = Firebase.firestore.collection("user_days")
 
-    private fun saveDataToFirestore(userDay: MyDayEntity) = CoroutineScope(Dispatchers.IO).launch {
-        val dto = MyDayFirebaseDTO(
-            date = userDay.date.toString(), // сериализуем LocalDate как строку
-            score = userDay.score,
-            note = userDay.note
-        )
-        try {
-            fstore.add(dto).await()
-            withContext(Dispatchers.Main) {
-                Log.d("Firestore", "Saved to Firestore")
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                Log.d("Firestore", e.message.toString())
-            }
-        }
-    }
+    fun subscribeToUserRealtimeUpdates() {
+        val uid = Firebase.auth.currentUser?.uid ?: return
 
-    fun subscribeToRealtimeUpdates() {
-        fstore.addSnapshotListener { querySnapshot, firebaseFirestoreException ->
-            firebaseFirestoreException?.let {
-                Log.d("Firestore", "Error: ${it.message}")
-                return@addSnapshotListener
-            }
+        Firebase.firestore.collection("users")
+            .document(uid)
+            .collection("days")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("Firestore", "Listen failed", error)
+                    return@addSnapshotListener
+                }
 
-            querySnapshot?.let { snapshot ->
-                viewModelScope.launch(Dispatchers.IO) {
-                    for (document in snapshot.documents) {
-                        try {
-                            val dto = document.toObject(MyDayFirebaseDTO::class.java)
-                            if (dto != null) {
-                                val entity = MyDayEntity(
-                                    date = LocalDate.parse(dto.date),
-                                    score = dto.score,
-                                    note = dto.note
-                                )
-                                myDayRepository.saveOrUpdateDayScore(
-                                    date = entity.date,
-                                    score = entity.score,
-                                    note = entity.note
-                                )
-                            }
-                        } catch (e: Exception) {
-                            Log.d("Firestore", "Parsing error: ${e.message}")
+                snapshot?.let {
+                    viewModelScope.launch(Dispatchers.IO) {
+                        for (doc in it.documents) {
+                            val dto = doc.toObject(MyDayFirebaseDTO::class.java) ?: continue
+                            val entity = MyDayEntity(
+                                date = LocalDate.parse(dto.date),
+                                score = dto.score,
+                                note = dto.note,
+                                lastUpdated = dto.lastUpdated
+                            )
+                            myDayRepository.saveOrUpdateDayScore(
+                                date = entity.date,
+                                score = entity.score,
+                                note = entity.note
+                            )
                         }
                     }
-                    Log.d("Firestore", "Synced real-time updates to Room")
                 }
             }
         }
-    }
 }

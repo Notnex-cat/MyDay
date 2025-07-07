@@ -42,11 +42,11 @@ fun PageContent(
     val text = note?.note ?: ""
 
     LaunchedEffect(Unit) {
-        viewModel.subscribeToRealtimeUpdates()
+        viewModel.subscribeToUserRealtimeUpdates()
     }
 
     Column {
-        Text(text = "$note")
+        //Text(text = "$note")
 
         ElevatedCard( // текст о дне
             elevation = CardDefaults.cardElevation(
@@ -89,14 +89,5 @@ fun PageContent(
                 }
             )
         }
-//        Button(
-//            onClick = {
-//                viewModel.getDataFromFirestore()
-//            },
-//            modifier = Modifier
-//                .padding(16.dp)
-//        ) {
-//            Text(text = "get data")
-//        }
     }
 }

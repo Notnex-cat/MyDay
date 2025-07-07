@@ -2,4 +2,13 @@
 <resources>
     <string name="settings">Настройки</string>
     <string name="write_something">Напишите что-нибудь…</string>
+    <string name="delete_account">Удалить аккаунт</string>
+    <string name="sign_in">Войти в аккаунт</string>
+    <string name="sign_out">Выйти из аккаунта</string>
+    <string name="sign_up">Зарегистрироваться</string>
+    <string name="about_app">О приложении</string>
+    <string name="sign_up_error">Ошибка регистрации</string>
+    <string name="email_or_password_is_empty">"Не хватает логина или пароля "</string>
+    <string name="login">Логин</string>
+    <string name="password">Пароль</string>
 </resources>

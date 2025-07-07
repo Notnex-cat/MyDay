@@ -5,16 +5,24 @@ import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
 
-class MyDayRepository @Inject constructor(private val dao: MyDayDAO) {
+class MyDayRepository @Inject constructor(val dao: MyDayDAO) {
     fun getScoreByDate(date: LocalDate): Flow<MyDayEntity?> = dao.getEntry(date)
 
     suspend fun saveOrUpdateDayScore(date: LocalDate, score: Double, note: String) {
         val existing = dao.getEntryOnce(date)
 
-        val updated = existing?.copy(score = score, note = note) ?: MyDayEntity(date = date, score = score, note = note)
+        val newTimestamp = System.currentTimeMillis()
+
+        val updated = when {
+            existing == null -> MyDayEntity(date, score, note, newTimestamp)
+            existing.score != score || existing.note != note ->
+                existing.copy(score = score, note = note, lastUpdated = newTimestamp)
+            else -> return // ничего не изменилось — выходим
+        }
 
         dao.insert(updated)
     }
+
 
     suspend fun deleteEntry(entry: MyDayEntity) = dao.delete(entry)
 }
