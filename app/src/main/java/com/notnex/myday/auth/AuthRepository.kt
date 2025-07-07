@@ -3,8 +3,6 @@ package com.notnex.myday.auth
 import android.content.Context
 import android.content.Intent
 import com.google.android.gms.auth.api.identity.SignInClient
-import com.google.firebase.auth.EmailAuthProvider
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase

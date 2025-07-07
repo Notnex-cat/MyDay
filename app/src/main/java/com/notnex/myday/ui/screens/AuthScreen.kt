@@ -36,6 +36,7 @@ import androidx.navigation.NavController
 import com.google.android.gms.auth.api.identity.Identity
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthViewModel
+import com.notnex.myday.viewmodel.Screen
 
 @Composable
 fun AuthScreen(
@@ -60,7 +61,10 @@ fun AuthScreen(
 
     LaunchedEffect(authState.isAuthenticated) {
         if (authState.isAuthenticated) {
-            navController.popBackStack()
+            navController.navigate(Screen.SettingScreen.route) {
+                popUpTo(Screen.SettingScreen.route) { inclusive = true }
+                launchSingleTop = true
+            }
         }
     }
 
