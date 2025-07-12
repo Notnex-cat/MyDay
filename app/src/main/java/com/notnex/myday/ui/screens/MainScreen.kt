@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -32,15 +34,15 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.notnex.myday.MyDayApp
 import com.notnex.myday.R
 import com.notnex.myday.ui.Settings
 import com.notnex.myday.viewmodel.MyDayViewModel
@@ -61,14 +65,16 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
+    //state: AuthState,
     navController: NavController,
-    viewModel: MyDayViewModel = hiltViewModel()
-    ) {
+    myDayViewModel: MyDayViewModel = hiltViewModel()
+) {
 
     val context = LocalContext.current
+    val authViewModel = (context.applicationContext as MyDayApp).authViewModel
     val weekOffsets = rememberPagerState(5, 0f) { 10 }
 
-    var selectedDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+    val selectedDate by myDayViewModel.selectedDate.collectAsState()
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -76,6 +82,7 @@ fun MainScreen(
     val dayOfWeekFormatter = DateTimeFormatter.ofPattern("E", Locale.getDefault()) // "Пн"
     val dayOfMonthFormatter = DateTimeFormatter.ofPattern("d") // "26"
 
+    val state by authViewModel.authState.collectAsState()
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -117,9 +124,27 @@ fun MainScreen(
                             IconButton(onClick = {
                                 val intent = Intent(context, Settings::class.java)
                                 context.startActivity(intent)
-                                //navController.navigate(Screen.SettingScreen.route)
                             }) {
-                                Icon(Icons.Outlined.AccountCircle, contentDescription = "Account")
+                                val avatarUrl = state.user?.profilePictureUrl
+
+                                if (avatarUrl != null) {
+                                    key(avatarUrl) { // Добавляем key для пересоздания при смене URL
+                                        AsyncImage(
+                                            model = avatarUrl, // Упрощаем без ImageRequest.Builder
+                                            contentDescription = "Profile picture",
+                                            modifier = Modifier
+                                                .size(30.dp)
+                                                .clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Outlined.AccountCircle,
+                                        contentDescription = "Default profile icon",
+                                        modifier = Modifier.size(30.dp)
+                                    )
+                                }
                             }
                         }
                     )
@@ -152,8 +177,7 @@ fun MainScreen(
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
                             weekDates.forEach { date ->
-                                val isSelected =
-                                    date == selectedDate // это такие сложные условия оба
+                                val isSelected = date == selectedDate // это такие сложные условия оба
                                 val isToday = date == LocalDate.now() //
 
                                 Column(
@@ -165,7 +189,7 @@ fun MainScreen(
                                             else if (isToday) MaterialTheme.colorScheme.secondaryContainer
                                             else Color.Transparent
                                         )
-                                        .clickable { selectedDate = date }
+                                        .clickable { myDayViewModel.setSelectedDate(date) }
                                         .padding(vertical = 6.dp, horizontal = 12.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
@@ -185,9 +209,7 @@ fun MainScreen(
                         }
                     }
                     PageContent(
-                        selectedDate,
-                        navController,
-                        viewModel
+                        navController
                     ) // текст дня и рейтинг дня все что ниже даты
                 }
             }

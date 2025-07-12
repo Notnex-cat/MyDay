@@ -11,4 +11,6 @@
     <string name="email_or_password_is_empty">"Не хватает логина или пароля "</string>
     <string name="login">Логин</string>
     <string name="password">Пароль</string>
+    <string name="log_in_error">Не хватает логина или пароля</string>
+    <string name="sign_in_with_google">Войти с помощью Google</string>
 </resources>

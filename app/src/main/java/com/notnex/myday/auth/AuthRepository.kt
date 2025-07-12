@@ -92,4 +92,4 @@ class AuthRepository(
     fun clearError() {
         _authState.value = _authState.value.copy(error = null)
     }
-} 
+}

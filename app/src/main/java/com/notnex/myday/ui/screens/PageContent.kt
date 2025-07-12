@@ -15,26 +15,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.notnex.myday.R
 import com.notnex.myday.ui.theme.RatingBar
 import com.notnex.myday.viewmodel.MyDayViewModel
 import com.notnex.myday.viewmodel.Screen
-import java.time.LocalDate
 
 
 @Composable
 fun PageContent(
-    selectedDate: LocalDate,
     navController: NavController,
-    viewModel: MyDayViewModel
+    viewModel: MyDayViewModel = hiltViewModel()
 ) {
+    val selectedDate = viewModel.selectedDate.collectAsState().value
+
     val note by viewModel.getScore(selectedDate).collectAsState(initial = null)
 
     val currentRating = note?.score ?: 4.5
@@ -44,6 +46,9 @@ fun PageContent(
     LaunchedEffect(Unit) {
         viewModel.subscribeToUserRealtimeUpdates()
     }
+
+    val currentDateState = rememberUpdatedState(selectedDate)
+    val currentNoteState = rememberUpdatedState(note)
 
     Column {
         //Text(text = "$note")
@@ -77,10 +82,12 @@ fun PageContent(
         ){
             RatingBar( // рейтинг дня
                 modifier = Modifier
-                    .size(60.dp),
+                    .size(100.dp),
                 rating = currentRating,
-                onRatingChanged = {
-                    viewModel.saveDayEntry(selectedDate, it, text)
+                onRatingChanged = { newRating ->
+                    val date = currentDateState.value
+                    val noteText = currentNoteState.value?.note.orEmpty()
+                    viewModel.saveDayEntry(date, newRating, noteText)
                 },
                 starsColor = when {
                     currentRating >= 4.0 -> Color.Green

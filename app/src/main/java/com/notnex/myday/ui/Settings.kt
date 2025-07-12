@@ -47,7 +47,7 @@ class Settings() : ComponentActivity() {
                                     state = authState,
                                     onSignOut = {
                                         viewModel.signOut()
-                                            //this@Settings.finish()
+                                        //this@Settings.finish()
                                     },
                                     navController = navController
                                 )

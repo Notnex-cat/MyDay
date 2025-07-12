@@ -1,18 +1,18 @@
 package com.notnex.myday.auth
 
-import android.app.Application
 import android.content.Intent
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.auth.api.identity.Identity
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class AuthViewModel(app: Application) : AndroidViewModel(app) {
-    private val repo = AuthRepository(
-        app.applicationContext,
-        Identity.getSignInClient(app.applicationContext)
-    )
+@HiltViewModel
+class AuthViewModel @Inject constructor(
+    private val repo: AuthRepository
+) : ViewModel() {
+
     val authState: StateFlow<AuthState> = repo.authState
 
     fun signInWithEmail(email: String, password: String) {

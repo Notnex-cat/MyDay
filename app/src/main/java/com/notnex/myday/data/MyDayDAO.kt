@@ -11,6 +11,9 @@ import java.time.LocalDate
 
 @Dao
 interface MyDayDAO {
+    @Query("SELECT * FROM day_entries")
+    suspend fun getFullEntry(): List<MyDayEntity>
+
     @Query("SELECT * FROM day_entries WHERE date = :date LIMIT 1")
     fun getEntry(date: LocalDate): Flow<MyDayEntity?>
 
