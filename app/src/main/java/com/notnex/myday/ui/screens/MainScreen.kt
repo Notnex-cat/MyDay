@@ -55,6 +55,7 @@ import com.notnex.myday.MyDayApp
 import com.notnex.myday.R
 import com.notnex.myday.ui.Settings
 import com.notnex.myday.viewmodel.MyDayViewModel
+import com.notnex.myday.viewmodel.Screen
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -123,7 +124,8 @@ fun MainScreen(
                         actions = { // кнопка аккаунт
                             IconButton(onClick = {
                                 val intent = Intent(context, Settings::class.java)
-                                context.startActivity(intent)
+                                //context.startActivity(intent)
+                                navController.navigate(Screen.SettingScreen.route)
                             }) {
                                 val avatarUrl = state.user?.profilePictureUrl
 

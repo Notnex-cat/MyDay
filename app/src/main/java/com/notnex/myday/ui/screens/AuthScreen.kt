@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -32,10 +33,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -59,6 +63,8 @@ fun AuthScreen(
     val context = LocalContext.current
     val oneTapClient = remember { Identity.getSignInClient(context) }
     //val auth = remember { Firebase.auth }
+
+    val focusManager = LocalFocusManager.current
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult(),
@@ -95,18 +101,23 @@ fun AuthScreen(
             TextField(
                 modifier = Modifier.border(width = 2.dp, color = Color.DarkGray, shape = RoundedCornerShape(20.dp)),
                 label = { Text(text = stringResource(R.string.login)) },
+                maxLines = 1,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(
+                    onNext = {
+                        focusManager.moveFocus(FocusDirection.Down)
+                    }
+                ),
                 value = emailState.value, onValueChange = { emailState.value = it }
             )
             Spacer(modifier = Modifier.height(10.dp))
             TextField(
                 modifier = Modifier
                     .border(width = 2.dp, color = Color.DarkGray, shape = RoundedCornerShape(20.dp)),
-                label = {
-                    Text(text = stringResource(R.string.password)
-                    )
-                        },
+                label = { Text(text = stringResource(R.string.password))},
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                maxLines = 1,
                 value = passwordState.value, onValueChange = { passwordState.value = it }
             )
             if (authState.error != null) {

@@ -93,4 +93,7 @@ dependencies {
 
     //coil
     debugImplementation(libs.coil.compose)
+
+    //okhttp
+    implementation(libs.okhttp)
 }

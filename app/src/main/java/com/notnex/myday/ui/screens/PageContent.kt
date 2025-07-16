@@ -29,7 +29,6 @@ import com.notnex.myday.ui.theme.RatingBar
 import com.notnex.myday.viewmodel.MyDayViewModel
 import com.notnex.myday.viewmodel.Screen
 
-
 @Composable
 fun PageContent(
     navController: NavController,

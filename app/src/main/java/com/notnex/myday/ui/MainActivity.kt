@@ -7,14 +7,21 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.notnex.myday.auth.AuthViewModel
+import com.notnex.myday.ui.screens.AuthScreen
 import com.notnex.myday.ui.screens.DayNote
 import com.notnex.myday.ui.screens.MainScreen
+import com.notnex.myday.ui.screens.SettingsScreen
 import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.Screen
 import dagger.hilt.android.AndroidEntryPoint
@@ -73,6 +80,27 @@ class MainActivity: ComponentActivity() {
                                 date = date,
                                 currentRating = currentRating,
                                 note = note
+                            )
+                        }
+
+                        composable("settings_screen"){
+                            val viewModel: AuthViewModel = hiltViewModel()
+                            val authState by viewModel.authState.collectAsState()
+                            val userId = authState.user?.userId ?: "no_user"
+                            key(userId) {
+                                SettingsScreen(
+                                    state = authState,
+                                    onSignOut = {
+                                        viewModel.signOut()
+                                        //this@Settings.finish()
+                                    },
+                                    navController = navController
+                                )
+                            }
+                        }
+                        composable("auth_screen") {
+                            AuthScreen(
+                                navController = navController
                             )
                         }
                     }
