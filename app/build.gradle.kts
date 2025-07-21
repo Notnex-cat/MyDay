@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +8,12 @@ plugins {
     id("kotlin-kapt")
     alias(libs.plugins.google.gms.google.services) // добавляем kapt
 }
+
+//protect api key
+val localProperties = Properties().apply {
+    load(rootProject.file("local.properties").inputStream())
+}
+val nnApiKey = localProperties["nn_key"] as String
 
 android {
     namespace = "com.notnex.myday"
@@ -19,6 +27,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "NN_API_KEY", "\"$nnApiKey\"")
     }
     kapt {
         arguments {
@@ -47,6 +57,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     buildToolsVersion = "36.0.0"
 }

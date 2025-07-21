@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "e5fdee8720e8c9076d0d291128bb54d1",
+    "identityHash": "50fdb494cc675f4f4f2935ec61dbfcf8",
     "entities": [
       {
         "tableName": "day_entries",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `score` REAL NOT NULL, `note` TEXT NOT NULL, `lastUpdated` INTEGER NOT NULL, PRIMARY KEY(`date`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `score` REAL NOT NULL, `note` TEXT NOT NULL, `lastUpdated` INTEGER NOT NULL, `aiFeedback` TEXT NOT NULL, PRIMARY KEY(`date`))",
         "fields": [
           {
             "fieldPath": "date",
@@ -31,6 +31,12 @@
             "columnName": "lastUpdated",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "aiFeedback",
+            "columnName": "aiFeedback",
+            "affinity": "TEXT",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -43,7 +49,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e5fdee8720e8c9076d0d291128bb54d1')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '50fdb494cc675f4f4f2935ec61dbfcf8')"
     ]
   }
 }

@@ -34,16 +34,17 @@ class MyDayViewModel @Inject constructor(
 
     private val fstore = Firebase.firestore
 
-    fun saveDayEntry(date: LocalDate, score: Double, note: String) {
+    fun saveDayEntry(date: LocalDate, score: Double, note: String, aiFeedback: String) {
         viewModelScope.launch {
             try {
                 val entity = MyDayEntity(
                     date = date,
                     score = score,
                     note = note,
-                    lastUpdated = System.currentTimeMillis()
+                    lastUpdated = System.currentTimeMillis(),
+                    aiFeedback = aiFeedback
                 )
-                myDayRepository.saveOrUpdateDayScore(date, score, note) // сохранение в базе данных локально
+                myDayRepository.saveOrUpdateDayScore(date, score, note, aiFeedback) // сохранение в базе данных локально
 
                 // 2. В Firestore только если пользователь авторизован
                 val uid = auth.currentUser?.uid
@@ -66,7 +67,8 @@ class MyDayViewModel @Inject constructor(
             date = entity.date.toString(),
             score = entity.score,
             note = entity.note,
-            lastUpdated = entity.lastUpdated
+            lastUpdated = entity.lastUpdated,
+            aiFeedback = entity.aiFeedback
         )
 
         val docRef = fstore
@@ -117,12 +119,14 @@ class MyDayViewModel @Inject constructor(
                             date = LocalDate.parse(dto.date),
                             score = dto.score,
                             note = dto.note,
-                            lastUpdated = dto.lastUpdated
+                            lastUpdated = dto.lastUpdated,
+                            aiFeedback = dto.aiFeedback
                         )
                         myDayRepository.saveOrUpdateDayScore(
                             date = entity.date,
                             score = entity.score,
-                            note = entity.note
+                            note = entity.note,
+                            aiFeedback = entity.aiFeedback
                         )
                     }
                 }
@@ -141,7 +145,7 @@ class MyDayViewModel @Inject constructor(
                 // Просто вызываем saveDayEntry для каждой записи
                 // Это автоматически обработает логику сравнения и сохранения
                 for (entry in localEntries) {
-                    saveDayEntry(entry.date, entry.score, entry.note)
+                    saveDayEntry(entry.date, entry.score, entry.note, entry.aiFeedback)
                 }
 
                 Log.d("Sync", "Local to cloud sync completed")

@@ -22,6 +22,8 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,13 +32,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.notnex.myday.BuildConfig
 import com.notnex.myday.R
 import com.notnex.myday.viewmodel.MyDayViewModel
 import kotlinx.coroutines.Job
@@ -65,13 +67,21 @@ fun DayNote(
 ){
     var text by remember { mutableStateOf(note) }
 
-    val context = LocalContext.current
+    //val context = LocalContext.current
 
     val coroutineScope = rememberCoroutineScope()
 
     var saveJob by remember { mutableStateOf<Job?>(null) }
 
+    val fullDB by viewModel.getScore(date).collectAsState(initial = null)
+
     var aiResponse by remember { mutableStateOf("") }
+
+    LaunchedEffect(fullDB?.aiFeedback) {
+        aiResponse = fullDB?.aiFeedback ?: ""
+    }
+
+    val apiKey = BuildConfig.GROQ_API_KEY
 
     Scaffold(
         topBar = {
@@ -105,8 +115,8 @@ fun DayNote(
                     text = it
                     saveJob?.cancel() // отменяем предыдущую задачу
                     saveJob = coroutineScope.launch {
-                        delay(1000) // 500 мс после последнего ввода
-                        viewModel.saveDayEntry(date, currentRating, it)
+                        delay(1500) // 500 мс после последнего ввода
+                        viewModel.saveDayEntry(date, currentRating, it, aiResponse!!)
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -128,9 +138,14 @@ fun DayNote(
                     coroutineScope.launch {
                         getResponse(
                             question = text,
-                            apiKey = "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", // твой ключ
+                            apiKey = apiKey, // твой ключ
                             onStreamUpdate = { chunk ->
                                 aiResponse += chunk
+                                saveJob?.cancel()
+                                saveJob = coroutineScope.launch {
+                                    delay(1000) // 500 мс после последнего ввода
+                                    viewModel.saveDayEntry(date, currentRating, text, aiResponse!!)
+                                }
                             }
                         )
                     }
@@ -148,7 +163,7 @@ fun DayNote(
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier
                             .padding(16.dp)
-                            .fillMaxWidth()
+                            .fillMaxWidth(),
                     )
                 }
             }
@@ -156,14 +171,14 @@ fun DayNote(
     }
 }
 
-suspend fun getResponse(question: String, apiKey: String, onStreamUpdate: (String) -> Unit) {
+fun getResponse(question: String, apiKey: String, onStreamUpdate: (String) -> Unit) {
     val client = OkHttpClient()
-    val url = "https://api.groq.com/openai/v1/chat/completions"
+    val url = "https://api.mistral.ai/v1/chat/completions"
     val cleanedQuestion = question.replace(Regex("[\\u0000-\\u001F]"), "")
 
     val requestBody = """
         {
-          "model": "mistral-saba-24b",
+          "model": "mistral-medium-latest",
           "stream": true,
           "messages": [
             {"role": "user", "content": "ты персональный ассистент-помощник по саморазвитию который помогает пользователю улучшить его показатели. Отвечай на языке на котором задается вопрос: $cleanedQuestion"}
@@ -185,7 +200,7 @@ suspend fun getResponse(question: String, apiKey: String, onStreamUpdate: (Strin
         }
 
         override fun onResponse(call: Call, response: Response) {
-            val source = response.body?.source() ?: return
+            val source = response.body.source()
             val buffer = okio.Buffer()
 
             try {

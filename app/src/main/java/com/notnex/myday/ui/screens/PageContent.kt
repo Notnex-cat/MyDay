@@ -36,21 +36,21 @@ fun PageContent(
 ) {
     val selectedDate = viewModel.selectedDate.collectAsState().value
 
-    val note by viewModel.getScore(selectedDate).collectAsState(initial = null)
+    val fullDB by viewModel.getScore(selectedDate).collectAsState(initial = null)
 
-    val currentRating = note?.score ?: 4.5
+    val currentRating = fullDB?.score ?: 4.5
 
-    val text = note?.note ?: ""
+    val text = fullDB?.note ?: ""
 
     LaunchedEffect(Unit) {
         viewModel.subscribeToUserRealtimeUpdates()
     }
 
     val currentDateState = rememberUpdatedState(selectedDate)
-    val currentNoteState = rememberUpdatedState(note)
+    val currentfullDBState = rememberUpdatedState(fullDB) //это прям объект всей БД
 
     Column {
-        //Text(text = "$note")
+        //Text(text = "$fullDB")
 
         ElevatedCard( // текст о дне
             elevation = CardDefaults.cardElevation(
@@ -85,8 +85,9 @@ fun PageContent(
                 rating = currentRating,
                 onRatingChanged = { newRating ->
                     val date = currentDateState.value
-                    val noteText = currentNoteState.value?.note.orEmpty()
-                    viewModel.saveDayEntry(date, newRating, noteText)
+                    val noteText = currentfullDBState.value?.note.orEmpty()
+                    val aiResponseText = currentfullDBState.value?.aiFeedback.orEmpty()
+                    viewModel.saveDayEntry(date, newRating, noteText, aiResponseText)
                 },
                 starsColor = when {
                     currentRating >= 4.0 -> Color.Green

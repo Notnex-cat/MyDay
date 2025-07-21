@@ -8,15 +8,15 @@ import java.time.LocalDate
 class MyDayRepository @Inject constructor(val dao: MyDayDAO) {
     fun getScoreByDate(date: LocalDate): Flow<MyDayEntity?> = dao.getEntry(date)
 
-    suspend fun saveOrUpdateDayScore(date: LocalDate, score: Double, note: String) {
+    suspend fun saveOrUpdateDayScore(date: LocalDate, score: Double, note: String, aiFeedback: String) {
         val existing = dao.getEntryOnce(date)
 
         val newTimestamp = System.currentTimeMillis()
 
         val updated = when {
-            existing == null -> MyDayEntity(date, score, note, newTimestamp)
-            existing.score != score || existing.note != note ->
-                existing.copy(score = score, note = note, lastUpdated = newTimestamp)
+            existing == null -> MyDayEntity(date, score, note, newTimestamp, aiFeedback)
+            existing.score != score || existing.note != note || existing.aiFeedback != aiFeedback ->
+                existing.copy(score = score, note = note, lastUpdated = newTimestamp, aiFeedback = aiFeedback)
             else -> return // ничего не изменилось — выходим
         }
 
