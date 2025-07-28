@@ -3,9 +3,9 @@ package com.notnex.myday.auth
 import android.content.Context
 import android.content.Intent
 import com.google.android.gms.auth.api.identity.SignInClient
+import com.google.firebase.Firebase
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.auth.auth
 import com.notnex.myday.firebase.UserData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -6,9 +6,9 @@ import java.time.LocalDate
 
 
 class MyDayRepository @Inject constructor(val dao: MyDayDAO) {
-    fun getScoreByDate(date: LocalDate): Flow<MyDayEntity?> = dao.getEntry(date)
+    fun getEntityByDate(date: LocalDate): Flow<MyDayEntity?> = dao.getEntry(date)
 
-    suspend fun saveOrUpdateDayScore(date: LocalDate, score: Double, note: String, aiFeedback: String) {
+    suspend fun saveOrUpdateDayEntity(date: LocalDate, score: Double, note: String, aiFeedback: String) {
         val existing = dao.getEntryOnce(date)
 
         val newTimestamp = System.currentTimeMillis()

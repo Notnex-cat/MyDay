@@ -2,7 +2,9 @@ package com.notnex.myday.ui.screens
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,29 +23,35 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,8 +61,11 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.notnex.myday.MyDayApp
 import com.notnex.myday.R
+import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
 import com.notnex.myday.ui.Settings
+import com.notnex.myday.ui.theme.RatingBar
 import com.notnex.myday.viewmodel.MyDayViewModel
+import com.notnex.myday.viewmodel.Screen
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -62,11 +73,11 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun MainScreen(
-    //state: AuthState,
+fun SharedTransitionScope.MainScreen(
     navController: NavController,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     myDayViewModel: MyDayViewModel = hiltViewModel()
 ) {
 
@@ -92,21 +103,15 @@ fun MainScreen(
         {
             Scaffold(
                 topBar = {
-                    TopAppBar(
+                    CenterAlignedTopAppBar(
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.background
                         ),
                         title = { // надпись с названием приложения по середине
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.app_name),
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-
-                            }
+                            Text(
+                                text = stringResource(R.string.app_name),
+                                style = MaterialTheme.typography.titleLarge
+                            )
                         },
                         navigationIcon = { // кнопка сендвич для бокового меню
                             IconButton(onClick = {
@@ -152,15 +157,25 @@ fun MainScreen(
                     )
                 },
                 floatingActionButton = { //кнопка снизу
-                    FloatingActionButton(onClick = {
-                        Toast.makeText(
-                            context,
-                            "Добавить заметку",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }) {
-                        Icon(Icons.Default.Add, contentDescription = "Добавить заметку")
-                    }
+//                    FloatingActionButton(onClick = {
+//                        Toast.makeText(
+//                            context,
+//                            "Добавить заметку",
+//                            Toast.LENGTH_SHORT
+//                        ).show()
+//                    }) {
+//                        Icon(Icons.Default.Add, contentDescription = "Добавить заметку")
+//                    }
+
+                    val isInExpandableScreen = remember { mutableStateOf(true) } // Или derive от NavController
+
+                    CustomFloatingActionButton(
+                        expandable = isInExpandableScreen.value,
+                        onFabClick = {
+                            // или логика открытия экрана создания события
+                        },
+                        fabIcon = Icons.Default.Add
+                    )
                 }
             ) { innerPadding ->
                 Column {
@@ -210,11 +225,87 @@ fun MainScreen(
                             }
                         }
                     }
-                    PageContent(
-                        navController
-                    ) // текст дня и рейтинг дня все что ниже даты
+//                    Screen.PageContent(
+//                        navController,
+//                        onCardClick = {
+//                            //navController.navigate(Screen.DayNote.route)
+//                        },
+//                        animatedVisibilityScope = this
+//                    ) // текст дня и рейтинг дня все что ниже даты
+
+
+
+                    val fullDB by myDayViewModel.getScore(selectedDate).collectAsState(initial = null)
+
+                    val currentRating = fullDB?.score ?: 4.5
+
+                    val text = fullDB?.note ?: ""
+
+                    LaunchedEffect(Unit) {
+                        myDayViewModel.subscribeToUserRealtimeUpdates()
+                    }
+
+                    val currentDateState = rememberUpdatedState(selectedDate)
+                    val currentfullDBState = rememberUpdatedState(fullDB) //это прям объект всей БД
+
+                    Column {
+                        //Text(text = "$fullDB")
+
+                        ElevatedCard( // текст о дне
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 2.dp
+                            ),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.onTertiary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                                .sharedBounds(
+                                    sharedContentState = rememberSharedContentState(
+                                        key = CARD_EXPLODE_BOUNDS_KEY
+                                    ),
+                                    animatedVisibilityScope = animatedVisibilityScope
+                                )
+                                .clickable {
+                                    navController.navigate("${Screen.DayNote.route}/${selectedDate}/${currentRating}/${text}")
+                                }
+
+                        ) {
+                            Text(
+                                text = text.ifEmpty { stringResource(R.string.write_something) },
+                                color = if (text.isEmpty()) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.padding(16.dp),
+                                maxLines = 10
+                            )
+                        }
+                        Box(modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ){
+                            RatingBar( // рейтинг дня
+                                modifier = Modifier
+                                    .size(100.dp),
+                                rating = currentRating,
+                                onRatingChanged = { newRating ->
+                                    val date = currentDateState.value
+                                    val noteText = currentfullDBState.value?.note.orEmpty()
+                                    val aiResponseText = currentfullDBState.value?.aiFeedback.orEmpty()
+                                    myDayViewModel.saveDayEntry(date, newRating, noteText, aiResponseText)
+                                },
+                                starsColor = when {
+                                    currentRating >= 4.0 -> Color.Green
+                                    currentRating >= 2.5 -> colorResource(R.color.orange)
+                                    else -> Color.Red
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
+

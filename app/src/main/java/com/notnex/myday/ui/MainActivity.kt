@@ -1,9 +1,13 @@
+@file:OptIn(ExperimentalSharedTransitionApi::class)
+
 package com.notnex.myday.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -21,9 +25,10 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+const val CARD_EXPLODE_BOUNDS_KEY = "CARD_EXPLODE_BOUNDS_KEY"
+
 @AndroidEntryPoint
 class MainActivity: ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -35,45 +40,50 @@ class MainActivity: ComponentActivity() {
                 ) {
                     val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE // или другой формат
                     val navController = rememberNavController()
-                    NavHost(
-                        navController = navController,
-                        startDestination = Screen.MainScreen.route
-                    ) {
-                        composable(
-                            route = Screen.MainScreen.route
+                    SharedTransitionLayout {
+                        NavHost(
+                            navController = navController,
+                            startDestination = Screen.MainScreen.route
                         ) {
-                            MainScreen(
-                                navController = navController
-                            )
-                        }
-                        composable(
-                            route = Screen.DayNote.route + "/{date}/{currentRating}/{note}",
-                            arguments = listOf(
-                                navArgument("date") {
-                                    type = NavType.StringType
-                                    nullable = true
-                                },
-                                navArgument("currentRating") {
-                                    type = NavType.FloatType
-                                    nullable = false
-                                },
-                                navArgument("note") {
-                                    type = NavType.StringType
-                                    nullable = true
-                                }
-                            )
-                        ) { entry ->
-                            val dateString = entry.arguments?.getString("date")
-                            val date = dateString.let { LocalDate.parse(it, dateFormatter) }
-                            val currentRating = entry.arguments?.getFloat("currentRating")?.toDouble() ?: 0.0
-                            val note = entry.arguments?.getString("note") ?: ""
+                            composable(
+                                route = Screen.MainScreen.route
+                            ) {
+                                MainScreen(
+                                    navController = navController,
+                                    animatedVisibilityScope = this,
+                                )
+                            }
+                            composable(
+                                route = Screen.DayNote.route + "/{date}/{currentRating}/{note}",
+                                arguments = listOf(
+                                    navArgument("date") {
+                                        type = NavType.StringType
+                                        nullable = true
+                                    },
+                                    navArgument("currentRating") {
+                                        type = NavType.FloatType
+                                        nullable = false
+                                    },
+                                    navArgument("note") {
+                                        type = NavType.StringType
+                                        nullable = true
+                                    }
+                                )
+                            ) { entry ->
+                                val dateString = entry.arguments?.getString("date")
+                                val date = dateString.let { LocalDate.parse(it, dateFormatter) }
+                                val currentRating =
+                                    entry.arguments?.getFloat("currentRating")?.toDouble() ?: 0.0
+                                val note = entry.arguments?.getString("note") ?: ""
 
-                            DayNote(
-                                navController = navController,
-                                date = date,
-                                currentRating = currentRating,
-                                note = note
-                            )
+                                DayNote(
+                                    navController = navController,
+                                    date = date,
+                                    currentRating = currentRating,
+                                    note = note,
+                                    animatedVisibilityScope = this
+                                )
+                            }
                         }
                     }
                 }

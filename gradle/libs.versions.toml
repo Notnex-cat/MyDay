@@ -1,31 +1,33 @@
 [versions]
 agp = "8.11.1"
+animation = "1.8.3"
 coilCompose = "2.7.0"
 firebaseAuthKtx = "23.2.1"
 firebaseFirestoreKtx = "25.1.4"
 googleServices = "4.4.3"
 hiltNavigationCompose = "1.2.0"
 kotlin = "2.2.0"
-hiltAndroidCompiler = "2.56.2"
+hiltAndroidCompiler = "2.57"
 coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.9.1"
+lifecycleRuntimeKtx = "2.9.2"
 activityCompose = "1.10.1"
-composeBom = "2025.06.01"
+composeBom = "2025.07.00"
 materialIconsExtended = "1.7.8"
 okhttp = "5.1.0"
-playServicesAuth = "21.3.0"
+playServicesAuth = "21.4.0"
 roomRuntime = "2.7.2"
-navigationCompose = "2.9.1"
+navigationCompose = "2.9.2"
 appcompat = "1.7.1"
 material = "1.12.0"
 activity = "1.10.1"
 googleGmsGoogleServices = "4.4.3"
-firebaseDatabase = "21.0.0"
+firebaseDatabase = "22.0.0"
 
 [libraries]
+androidx-animation = { module = "androidx.compose.animation:animation", version.ref = "animation" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }

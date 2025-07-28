@@ -3,17 +3,22 @@ package com.notnex.myday.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.firestore
 import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
 import com.notnex.myday.data.MyDayEntity
 import com.notnex.myday.data.MyDayFirebaseDTO
 import com.notnex.myday.data.MyDayRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
@@ -28,7 +33,7 @@ class MyDayViewModel @Inject constructor(
     //Database
     private val _saveResult = MutableStateFlow(Result.success(Unit))
 
-    fun getScore(date: LocalDate) = myDayRepository.getScoreByDate(date)
+    fun getScore(date: LocalDate) = myDayRepository.getEntityByDate(date)
 
     private val auth = Firebase.auth
 
@@ -44,7 +49,7 @@ class MyDayViewModel @Inject constructor(
                     lastUpdated = System.currentTimeMillis(),
                     aiFeedback = aiFeedback
                 )
-                myDayRepository.saveOrUpdateDayScore(date, score, note, aiFeedback) // сохранение в базе данных локально
+                myDayRepository.saveOrUpdateDayEntity(date, score, note, aiFeedback) // сохранение в базе данных локально
 
                 // 2. В Firestore только если пользователь авторизован
                 val uid = auth.currentUser?.uid
@@ -90,50 +95,65 @@ class MyDayViewModel @Inject constructor(
         }
     }
 
-    private val _selectedDate = MutableStateFlow(LocalDate.now())
-    val selectedDate: StateFlow<LocalDate> = _selectedDate
-    fun setSelectedDate(date: LocalDate) {
-        _selectedDate.value = date
-    }
-
-
     //Firebase
     //Firestore Database
     fun subscribeToUserRealtimeUpdates() {
         val uid = Firebase.auth.currentUser?.uid ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            firestoreUserDaysFlow(uid).collect { dtoList ->
+                for (dto in dtoList) {
+                    val remoteEntity = MyDayEntity(
+                        date = LocalDate.parse(dto.date),
+                        score = dto.score,
+                        note = dto.note,
+                        lastUpdated = dto.lastUpdated,
+                        aiFeedback = dto.aiFeedback
+                    )
 
-        Firebase.firestore.collection("users")
-            .document(uid)
-            .collection("days")
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Log.e("Firestore", "Listen failed", error)
-                    return@addSnapshotListener
-                }
+                    val localEntity = myDayRepository.getEntityByDate(remoteEntity.date).firstOrNull()
 
-            snapshot?.let {
-                viewModelScope.launch(Dispatchers.IO) {
-                    for (doc in it.documents) {
-                        val dto = doc.toObject(MyDayFirebaseDTO::class.java) ?: continue
-                        val entity = MyDayEntity(
-                            date = LocalDate.parse(dto.date),
-                            score = dto.score,
-                            note = dto.note,
-                            lastUpdated = dto.lastUpdated,
-                            aiFeedback = dto.aiFeedback
+                    if (remoteEntity.lastUpdated > (localEntity?.lastUpdated ?: 0L)) {
+                        myDayRepository.saveOrUpdateDayEntity(
+                            date = remoteEntity.date,
+                            score = remoteEntity.score,
+                            note = remoteEntity.note,
+                            aiFeedback = remoteEntity.aiFeedback
                         )
-                        myDayRepository.saveOrUpdateDayScore(
-                            date = entity.date,
-                            score = entity.score,
-                            note = entity.note,
-                            aiFeedback = entity.aiFeedback
-                        )
+                    } else {
+                        //Log.d("Firestore", "Local data is newer or same, skip update for ${remoteEntity.date}")
                     }
                 }
             }
         }
     }
 
+
+    private fun firestoreUserDaysFlow(uid: String) = callbackFlow<List<MyDayFirebaseDTO>> {
+        val listener = fstore.collection("users")
+            .document(uid)
+            .collection("days")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error) // Закрываем Flow при ошибке
+                    return@addSnapshotListener
+                }
+
+                val dtoList = snapshot?.documents
+                    ?.mapNotNull { it.toObject(MyDayFirebaseDTO::class.java) }
+                    ?: emptyList()
+
+                trySend(dtoList).isSuccess
+            }
+
+        awaitClose { listener.remove() } // Удаляем listener при отмене подписки
+    }
+
+
+    private val _selectedDate = MutableStateFlow(LocalDate.now())
+    val selectedDate: StateFlow<LocalDate> = _selectedDate
+    fun setSelectedDate(date: LocalDate) {
+        _selectedDate.value = date
+    }
 
     // Синхронизация локальных данных с облаком при входе в аккаунт
     fun syncLocalDataToCloud() {

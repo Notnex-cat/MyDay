@@ -1,10 +1,12 @@
 package com.notnex.myday.data
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.time.LocalDate
 
 @Entity(tableName = "day_entries")
+@Immutable
 data class MyDayEntity(
     @PrimaryKey val date: LocalDate,
     val score: Double,
@@ -13,6 +15,7 @@ data class MyDayEntity(
     val aiFeedback: String
 )
 
+@Immutable
 data class MyDayFirebaseDTO(
     val date: String = "",          // формат YYYY-MM-DD
     val score: Double = 0.0,
