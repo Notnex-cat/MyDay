@@ -1,6 +1,5 @@
 package com.notnex.myday.ui.screens
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -43,34 +42,22 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.notnex.myday.BuildConfig
 import com.notnex.myday.R
+import com.notnex.myday.neuralnetwork.getResponse
 import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
 import com.notnex.myday.viewmodel.MyDayViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
-import org.json.JSONObject
-import java.io.IOException
 import java.time.LocalDate
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun SharedTransitionScope.DayNote(
     navController: NavController,
     viewModel: MyDayViewModel = hiltViewModel(),
-    currentRating: Double,
     date: LocalDate,
-    note: String,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ){
-    var text by remember { mutableStateOf(note) }
 
     //val context = LocalContext.current
 
@@ -80,11 +67,19 @@ fun SharedTransitionScope.DayNote(
 
     val fullDB by viewModel.getScore(date).collectAsState(initial = null)
 
+    val currentRating = fullDB?.score ?: 4.5
+
+    var localtext by remember { mutableStateOf("") }
+
     var aiResponse by remember { mutableStateOf("") }
 
-    LaunchedEffect(fullDB?.aiFeedback) {
+    LaunchedEffect(fullDB) {
+        if (fullDB != null && localtext.isEmpty()) {
+            localtext = fullDB!!.note
+        }
         aiResponse = fullDB?.aiFeedback ?: ""
     }
+
     val apiKey = BuildConfig.NN_API_KEY
 
     Scaffold(
@@ -121,16 +116,16 @@ fun SharedTransitionScope.DayNote(
             verticalArrangement = Arrangement.Top
         ) {
             TextField(
-                value = text,
+                value = localtext,
                 minLines = 5,
-                //maxLines = 5,
+                maxLines = 10,
                 placeholder = { Text(stringResource(R.string.write_something)) },
                 onValueChange = {
-                    text = it
+                    localtext = it
                     saveJob?.cancel() // отменяем предыдущую задачу
                     saveJob = coroutineScope.launch {
                         delay(1500) // 500 мс после последнего ввода
-                        viewModel.saveDayEntry(date, currentRating, it, aiResponse!!)
+                        viewModel.saveDayEntry(date, currentRating, it, aiResponse)
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -150,14 +145,14 @@ fun SharedTransitionScope.DayNote(
                 onClick = {
                     aiResponse = "" // обнуляем перед новым ответом
                     getResponse(
-                        question = text,
+                        question = localtext,
                         apiKey = apiKey, // твой ключ
                         onStreamUpdate = { chunk ->
                             aiResponse += chunk
                             saveJob?.cancel()
                             saveJob = coroutineScope.launch {
                                 delay(1000) // 500 мс после последнего ввода
-                                viewModel.saveDayEntry(date, currentRating, text, aiResponse)
+                                viewModel.saveDayEntry(date, currentRating, localtext, aiResponse)
                             }
                         }
                     )
@@ -166,13 +161,10 @@ fun SharedTransitionScope.DayNote(
                 Text(text = "Спросить")
             }
 
-            // LazyColumn is used here to display the AI's response.
-            // It's a vertically scrolling list that only composes and lays out the currently visible items.
-            LazyColumn(
+            LazyColumn( // нужено чтобы ответ листался
                 modifier = Modifier.fillMaxWidth()
             ) {
                 item {
-                    // Text composable to display the AI's response.
                     Text(
                         text = aiResponse,
                         style = MaterialTheme.typography.bodyLarge,
@@ -184,62 +176,4 @@ fun SharedTransitionScope.DayNote(
             }
         }
     }
-}
-
-fun getResponse(question: String, apiKey: String, onStreamUpdate: (String) -> Unit) {
-    val client = OkHttpClient()
-    val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
-
-    val requestBody = """
-        {
-          "model": "mistral-medium-latest",
-          "messages": [
-            {
-              "role": "user",
-              "content": "ты персональный ассистент-помощник по саморазвитию который помогает пользователю улучшить его показатели. Отвечай на языке на котором задается вопрос: $question"
-            }
-          ],
-          "stream": true
-        }
-        """.trimIndent()
-
-    val request = Request.Builder()
-        .url("https://api.mistral.ai/v1/chat/completions")
-        .post(requestBody.toRequestBody("application/json".toMediaType()))
-        .addHeader("Authorization", "Bearer $apiKey")
-        .addHeader("Accept", "text/event-stream")
-        .build()
-
-    client.newCall(request).enqueue(object : Callback {
-        override fun onFailure(call: Call, e: IOException) {
-            Log.e("HTTP", "Ошибка запроса: ${e.message}")
-        }
-
-        override fun onResponse(call: Call, response: Response) {
-            val source = response.body.source()
-
-            while (!source.exhausted()) {
-                val line = source.readUtf8Line()
-                if (line != null && line.startsWith("data: ")) {
-                    val json = line.removePrefix("data: ").trim()
-
-                    if (json == "[DONE]") break
-
-                    val content = JSONObject(json)
-                        .getJSONArray("choices")
-                        .getJSONObject(0)
-                        .getJSONObject("delta")
-                        .optString("content", "")
-
-                        //Log.d("STREAM", content)
-
-                    if (content.isNotEmpty()) {
-                        mainHandler.post {
-                            onStreamUpdate(content)
-                        }
-                    }
-                }
-            }
-        }
-    })
 }

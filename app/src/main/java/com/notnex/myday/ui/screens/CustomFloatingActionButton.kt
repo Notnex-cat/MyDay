@@ -33,10 +33,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.notnex.myday.viewmodel.Screen
 
 
 @Composable
 fun CustomFloatingActionButton(
+    navController: NavController,
     expandable: Boolean,
     onFabClick: () -> Unit,
     fabIcon: ImageVector
@@ -71,7 +74,7 @@ fun CustomFloatingActionButton(
                     )
                     .padding(vertical = 12.dp)
             ) {
-                TextButton(onClick = { /* TODO: Handle New Note */ }) {
+                TextButton(onClick = { navController.navigate(Screen.ScheduleScreen.route) }) {
                     Icon(Icons.Default.NoteAdd, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Новая заметка")

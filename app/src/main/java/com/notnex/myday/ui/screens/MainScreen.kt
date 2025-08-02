@@ -170,6 +170,7 @@ fun SharedTransitionScope.MainScreen(
                     val isInExpandableScreen = remember { mutableStateOf(true) } // Или derive от NavController
 
                     CustomFloatingActionButton(
+                        navController = navController,
                         expandable = isInExpandableScreen.value,
                         onFabClick = {
                             // или логика открытия экрана создания события
@@ -269,7 +270,7 @@ fun SharedTransitionScope.MainScreen(
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
                                 .clickable {
-                                    navController.navigate("${Screen.DayNote.route}/${selectedDate}/${currentRating}/${text}")
+                                    navController.navigate("${Screen.DayNote.route}/${selectedDate}")
                                 }
 
                         ) {

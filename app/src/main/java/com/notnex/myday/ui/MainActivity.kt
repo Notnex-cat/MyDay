@@ -19,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.notnex.myday.ui.screens.DayNote
 import com.notnex.myday.ui.screens.MainScreen
+import com.notnex.myday.ui.screens.ScheduleScreen
 import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.Screen
 import dagger.hilt.android.AndroidEntryPoint
@@ -54,35 +55,40 @@ class MainActivity: ComponentActivity() {
                                 )
                             }
                             composable(
-                                route = Screen.DayNote.route + "/{date}/{currentRating}/{note}",
+                                route = Screen.DayNote.route + "/{date}",
                                 arguments = listOf(
                                     navArgument("date") {
                                         type = NavType.StringType
                                         nullable = true
                                     },
-                                    navArgument("currentRating") {
-                                        type = NavType.FloatType
-                                        nullable = false
-                                    },
-                                    navArgument("note") {
-                                        type = NavType.StringType
-                                        nullable = true
-                                    }
+//                                    navArgument("currentRating") {
+//                                        type = NavType.FloatType
+//                                        nullable = false
+//                                    },
+//                                    navArgument("note") {
+//                                        type = NavType.StringType
+//                                        nullable = true
+//                                    }
                                 )
                             ) { entry ->
                                 val dateString = entry.arguments?.getString("date")
                                 val date = dateString.let { LocalDate.parse(it, dateFormatter) }
-                                val currentRating =
-                                    entry.arguments?.getFloat("currentRating")?.toDouble() ?: 0.0
-                                val note = entry.arguments?.getString("note") ?: ""
+//                                val currentRating =
+//                                    entry.arguments?.getFloat("currentRating")?.toDouble() ?: 0.0
+//                                val note = entry.arguments?.getString("note") ?: ""
 
                                 DayNote(
                                     navController = navController,
                                     date = date,
-                                    currentRating = currentRating,
-                                    note = note,
+                                    //currentRating = currentRating,
+                                    //note = note,
                                     animatedVisibilityScope = this
                                 )
+                            }
+                            composable(
+                                route = Screen.ScheduleScreen.route
+                            ) {
+                                ScheduleScreen()
                             }
                         }
                     }
