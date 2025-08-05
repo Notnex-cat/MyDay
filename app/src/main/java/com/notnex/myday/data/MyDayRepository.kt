@@ -25,6 +25,5 @@ class MyDayRepository @Inject constructor(val dao: MyDayDAO) {
 
     suspend fun getAllLocalEntries(): List<MyDayEntity> = dao.getFullEntry()
 
-
-    suspend fun deleteEntry(entry: MyDayEntity) = dao.delete(entry)
+    suspend fun deleteEntry(entry: MyDayEntity) = dao.delete(entry) //рудимент
 }

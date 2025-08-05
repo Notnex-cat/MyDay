@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,7 +43,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.notnex.myday.BuildConfig
 import com.notnex.myday.R
-import com.notnex.myday.neuralnetwork.getResponse
+import com.notnex.myday.neuralnetwork.NNResult
+import com.notnex.myday.neuralnetwork.NNViewModel
 import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
 import com.notnex.myday.viewmodel.MyDayViewModel
 import kotlinx.coroutines.Job
@@ -55,12 +57,10 @@ import java.time.LocalDate
 fun SharedTransitionScope.DayNote(
     navController: NavController,
     viewModel: MyDayViewModel = hiltViewModel(),
+    nnViewModel: NNViewModel = hiltViewModel(),
     date: LocalDate,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ){
-
-    //val context = LocalContext.current
-
     val coroutineScope = rememberCoroutineScope()
 
     var saveJob by remember { mutableStateOf<Job?>(null) }
@@ -72,6 +72,8 @@ fun SharedTransitionScope.DayNote(
     var localtext by remember { mutableStateOf("") }
 
     var aiResponse by remember { mutableStateOf("") }
+
+    val state by nnViewModel.responseState.collectAsState()
 
     LaunchedEffect(fullDB) {
         if (fullDB != null && localtext.isEmpty()) {
@@ -105,7 +107,6 @@ fun SharedTransitionScope.DayNote(
             )
         }
     ) { innerPadding ->
-
         Column(
             modifier = Modifier
                 .padding(innerPadding)
@@ -144,9 +145,8 @@ fun SharedTransitionScope.DayNote(
                     .padding(top = 16.dp),
                 onClick = {
                     aiResponse = "" // обнуляем перед новым ответом
-                    getResponse(
-                        question = localtext,
-                        apiKey = apiKey, // твой ключ
+                    nnViewModel.requestFromDayNote(
+                        userInput = localtext,
                         onStreamUpdate = { chunk ->
                             aiResponse += chunk
                             saveJob?.cancel()
@@ -165,13 +165,21 @@ fun SharedTransitionScope.DayNote(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 item {
-                    Text(
-                        text = aiResponse,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                    )
+                    when (state) {
+                        is NNResult.Loading -> CircularProgressIndicator()
+                        is NNResult.Success, NNResult.Idle -> {
+                            Text(
+                                text = aiResponse,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth(),
+                            )
+                        }
+                        is NNResult.Error -> {
+                            Text("Ошибка: ${(state as NNResult.Error).exception.message}")
+                        }
+                    }
                 }
             }
         }

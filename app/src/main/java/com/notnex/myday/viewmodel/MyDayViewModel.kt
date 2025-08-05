@@ -24,7 +24,6 @@ import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import javax.inject.Inject
 
-
 @HiltViewModel
 class MyDayViewModel @Inject constructor(
     private val myDayRepository: MyDayRepository,
@@ -126,7 +125,6 @@ class MyDayViewModel @Inject constructor(
             }
         }
     }
-
 
     private fun firestoreUserDaysFlow(uid: String) = callbackFlow<List<MyDayFirebaseDTO>> {
         val listener = fstore.collection("users")
