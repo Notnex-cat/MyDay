@@ -4,7 +4,6 @@ import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
-
 class MyDayRepository @Inject constructor(val dao: MyDayDAO) {
     fun getEntityByDate(date: LocalDate): Flow<MyDayEntity?> = dao.getEntry(date)
 
