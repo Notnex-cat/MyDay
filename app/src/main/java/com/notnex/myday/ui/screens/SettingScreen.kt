@@ -164,12 +164,6 @@ fun SettingsScreen(
                             }
                         }
 
-//                        Button(
-//                            modifier = Modifier.padding(16.dp),
-//                            onClick = onSignOut
-//                        ) {
-//                            Text(text = "Sign out")
-//                        }
                     }
                 } else {
                     Text(

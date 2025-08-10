@@ -25,6 +25,7 @@ import com.notnex.myday.viewmodel.Screen
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 const val CARD_EXPLODE_BOUNDS_KEY = "CARD_EXPLODE_BOUNDS_KEY"
 
@@ -59,7 +60,7 @@ class MainActivity: ComponentActivity() {
                                 arguments = listOf(
                                     navArgument("date") {
                                         type = NavType.StringType
-                                        nullable = true
+                                        nullable = false
                                     },
 //                                    navArgument("currentRating") {
 //                                        type = NavType.FloatType
@@ -72,7 +73,11 @@ class MainActivity: ComponentActivity() {
                                 )
                             ) { entry ->
                                 val dateString = entry.arguments?.getString("date")
-                                val date = dateString.let { LocalDate.parse(it, dateFormatter) }
+                                val date = try {
+                                    LocalDate.parse(requireNotNull(dateString), dateFormatter)
+                                } catch (_: Exception) {
+                                    LocalDate.now()
+                                }
 //                                val currentRating =
 //                                    entry.arguments?.getFloat("currentRating")?.toDouble() ?: 0.0
 //                                val note = entry.arguments?.getString("note") ?: ""

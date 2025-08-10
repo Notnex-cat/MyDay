@@ -59,8 +59,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.notnex.myday.MyDayApp
 import com.notnex.myday.R
+import com.notnex.myday.auth.AuthViewModel
 import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
 import com.notnex.myday.ui.Settings
 import com.notnex.myday.ui.theme.RatingBar
@@ -82,7 +82,7 @@ fun SharedTransitionScope.MainScreen(
 ) {
 
     val context = LocalContext.current
-    val authViewModel = (context.applicationContext as MyDayApp).authViewModel
+    val authViewModel: AuthViewModel = hiltViewModel()
     val weekOffsets = rememberPagerState(5, 0f) { 10 }
 
     val selectedDate by myDayViewModel.selectedDate.collectAsState()
@@ -94,6 +94,15 @@ fun SharedTransitionScope.MainScreen(
     val dayOfMonthFormatter = DateTimeFormatter.ofPattern("d") // "26"
 
     val state by authViewModel.authState.collectAsState()
+
+    // Управляем подпиской на облачные обновления в зависимости от аутентификации
+    LaunchedEffect(state.isAuthenticated) {
+        if (state.isAuthenticated) {
+            myDayViewModel.subscribeToUserRealtimeUpdates()
+        } else {
+            myDayViewModel.stopUserRealtimeUpdates()
+        }
+    }
     
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -157,15 +166,6 @@ fun SharedTransitionScope.MainScreen(
                     )
                 },
                 floatingActionButton = { //кнопка снизу
-//                    FloatingActionButton(onClick = {
-//                        Toast.makeText(
-//                            context,
-//                            "Добавить заметку",
-//                            Toast.LENGTH_SHORT
-//                        ).show()
-//                    }) {
-//                        Icon(Icons.Default.Add, contentDescription = "Добавить заметку")
-//                    }
 
                     val isInExpandableScreen = remember { mutableStateOf(true) } // Или derive от NavController
 
@@ -226,15 +226,6 @@ fun SharedTransitionScope.MainScreen(
                             }
                         }
                     }
-//                    Screen.PageContent(
-//                        navController,
-//                        onCardClick = {
-//                            //navController.navigate(Screen.DayNote.route)
-//                        },
-//                        animatedVisibilityScope = this
-//                    ) // текст дня и рейтинг дня все что ниже даты
-
-
 
                     val fullDB by myDayViewModel.getScore(selectedDate).collectAsState(initial = null)
 
@@ -242,16 +233,10 @@ fun SharedTransitionScope.MainScreen(
 
                     val text = fullDB?.note ?: ""
 
-                    LaunchedEffect(Unit) {
-                        myDayViewModel.subscribeToUserRealtimeUpdates()
-                    }
-
                     val currentDateState = rememberUpdatedState(selectedDate)
                     val currentfullDBState = rememberUpdatedState(fullDB) //это прям объект всей БД
 
                     Column {
-                        //Text(text = "$fullDB")
-
                         ElevatedCard( // текст о дне
                             elevation = CardDefaults.cardElevation(
                                 defaultElevation = 2.dp

@@ -1,6 +1,5 @@
 package com.notnex.myday.auth
 
-import android.content.Context
 import android.content.Intent
 import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.Firebase
@@ -19,7 +18,6 @@ data class AuthState(
 )
 
 class AuthRepository(
-    private val context: Context,
     private val oneTapClient: SignInClient
 ) {
     private val auth = Firebase.auth
@@ -46,6 +44,7 @@ class AuthRepository(
         _authState.value = _authState.value.copy(isLoading = true, error = null)
         try {
             auth.signInWithEmailAndPassword(email, password).await()
+            auth.currentUser?.reload()?.await()
             _authState.value = AuthState(
                 isAuthenticated = true,
                 user = getCurrentUser()
@@ -59,6 +58,7 @@ class AuthRepository(
         _authState.value = _authState.value.copy(isLoading = true, error = null)
         try {
             auth.createUserWithEmailAndPassword(email, password).await()
+            auth.currentUser?.reload()?.await()
             _authState.value = AuthState(
                 isAuthenticated = true,
                 user = getCurrentUser()
@@ -75,9 +75,21 @@ class AuthRepository(
             val googleIdToken = credential.googleIdToken
             val googleCredentials = GoogleAuthProvider.getCredential(googleIdToken, null)
             auth.signInWithCredential(googleCredentials).await()
+            // Обновим данные пользователя, чтобы появились displayName/photoUrl
+            auth.currentUser?.reload()?.await()
+            val firebaseUser = auth.currentUser
+            val userData = UserData(
+                userId = firebaseUser?.uid ?: credential.id,
+                username = firebaseUser?.displayName
+                    ?: credential.displayName
+                    ?: firebaseUser?.email?.substringBefore("@"),
+                profilePictureUrl = firebaseUser?.photoUrl?.toString()
+                    ?: credential.profilePictureUri?.toString(),
+                email = firebaseUser?.email
+            )
             _authState.value = AuthState(
                 isAuthenticated = true,
-                user = getCurrentUser()
+                user = userData
             )
         } catch (e: Exception) {
             _authState.value = AuthState(error = e.message)

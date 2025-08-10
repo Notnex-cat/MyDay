@@ -125,7 +125,7 @@ fun SharedTransitionScope.DayNote(
                     localtext = it
                     saveJob?.cancel() // отменяем предыдущую задачу
                     saveJob = coroutineScope.launch {
-                        delay(1500) // 500 мс после последнего ввода
+                        delay(1500) // 1500 мс после последнего ввода
                         viewModel.saveDayEntry(date, currentRating, it, aiResponse)
                     }
                 },
@@ -151,7 +151,7 @@ fun SharedTransitionScope.DayNote(
                             aiResponse += chunk
                             saveJob?.cancel()
                             saveJob = coroutineScope.launch {
-                                delay(1000) // 500 мс после последнего ввода
+                                delay(1500)
                                 viewModel.saveDayEntry(date, currentRating, localtext, aiResponse)
                             }
                         }

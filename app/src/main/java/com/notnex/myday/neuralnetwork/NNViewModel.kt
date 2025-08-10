@@ -78,6 +78,7 @@ class NNViewModel @Inject constructor(
         if (!response.isSuccessful) throw Exception("HTTP ${response.code}")
 
         val bodyString = response.body.string()
+        response.close()
         val jsonObject = Json.Default.parseToJsonElement(bodyString).jsonObject
         val choices = jsonObject["choices"]?.jsonArray ?: throw Exception("Missing choices")
         val message = choices[0].jsonObject["message"]?.jsonObject ?: throw Exception("Missing message")
@@ -103,25 +104,28 @@ class NNViewModel @Inject constructor(
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val source = response.body.source()
-
-                while (!source.exhausted()) {
-                    val line = source.readUtf8Line()
-                    if (line != null && line.startsWith("data: ")) {
-                        val json = line.removePrefix("data: ").trim()
-
-                        if (json == "[DONE]") break
-
-                        val content = JSONObject(json)
-                            .getJSONArray("choices")
-                            .getJSONObject(0)
-                            .getJSONObject("delta")
-                            .optString("content", "")
-
-                        if (content.isNotEmpty()) {
-                            onStreamUpdate(content) // 🔄 Стриминг в UI
+                try {
+                    val body = response.body ?: return
+                    val source = body.source()
+                    while (!source.exhausted()) {
+                        val line = source.readUtf8Line() ?: break
+                        if (line.startsWith("data: ")) {
+                            val json = line.removePrefix("data: ").trim()
+                            if (json == "[DONE]") break
+                            val content = JSONObject(json)
+                                .getJSONArray("choices")
+                                .getJSONObject(0)
+                                .getJSONObject("delta")
+                                .optString("content", "")
+                            if (content.isNotEmpty()) {
+                                onStreamUpdate(content)
+                            }
                         }
                     }
+                } catch (e: Exception) {
+                    Log.e("HTTP", "Ошибка чтения стрима: ${e.message}")
+                } finally {
+                    response.close()
                 }
             }
         })
@@ -155,7 +159,6 @@ class NNViewModel @Inject constructor(
         PromptType.Schedule -> "Ты — ассистент по составлению расписания дня. Пользователь сказал: $input Сформируй подробное расписание на основе этого, в формате JSON-массива с объектами: - time: время в формате \\\"HH:mm\\\" - task: описание задачи Пример ответа:[ {\\\"time\\\": \\\"07:30\\\", \\\"task\\\": \\\"Подъем и зарядка\\\"}, {\\\"time\\\": \\\"08:00\\\", \\\"task\\\": \\\"Завтрак\\\"}, {\\\"time\\\": \\\"09:00\\\", \\\"task\\\": \\\"Работа над проектом\\\"} ] Возвращай ТОЛЬКО JSON — никаких пояснений и комментариев."
         PromptType.NoteFeedback -> "ты персональный ассистент... Отвечай на языке на котором задан вопрос: ${input.replace(Regex("\\s+"), " ").trim()}"
     }
-
 }
 
 enum class PromptType { Schedule, NoteFeedback }

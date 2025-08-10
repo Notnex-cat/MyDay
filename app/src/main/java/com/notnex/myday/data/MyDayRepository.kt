@@ -1,21 +1,25 @@
 package com.notnex.myday.data
 
-import jakarta.inject.Inject
+import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
 class MyDayRepository @Inject constructor(val dao: MyDayDAO) {
     fun getEntityByDate(date: LocalDate): Flow<MyDayEntity?> = dao.getEntry(date)
 
-    suspend fun saveOrUpdateDayEntity(date: LocalDate, score: Double, note: String, aiFeedback: String) {
+    suspend fun saveOrUpdateDayEntity(
+        date: LocalDate,
+        score: Double,
+        note: String,
+        aiFeedback: String,
+        lastUpdated: Long
+    ) {
         val existing = dao.getEntryOnce(date)
 
-        val newTimestamp = System.currentTimeMillis()
-
         val updated = when {
-            existing == null -> MyDayEntity(date, score, note, newTimestamp, aiFeedback)
+            existing == null -> MyDayEntity(date, score, note, lastUpdated, aiFeedback)
             existing.score != score || existing.note != note || existing.aiFeedback != aiFeedback ->
-                existing.copy(score = score, note = note, lastUpdated = newTimestamp, aiFeedback = aiFeedback)
+                existing.copy(score = score, note = note, lastUpdated = lastUpdated, aiFeedback = aiFeedback)
             else -> return // ничего не изменилось — выходим
         }
 

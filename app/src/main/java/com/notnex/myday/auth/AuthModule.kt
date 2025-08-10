@@ -7,16 +7,18 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AuthModule {
 
     @Provides
+    @Singleton
     fun provideAuthRepository(
         @ApplicationContext context: Context
     ): AuthRepository {
         val client = Identity.getSignInClient(context)
-        return AuthRepository(context, client)
+        return AuthRepository(client)
     }
 }

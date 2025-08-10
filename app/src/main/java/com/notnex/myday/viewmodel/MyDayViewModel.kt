@@ -14,6 +14,7 @@ import com.notnex.myday.data.MyDayFirebaseDTO
 import com.notnex.myday.data.MyDayRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,17 +39,26 @@ class MyDayViewModel @Inject constructor(
 
     private val fstore = Firebase.firestore
 
+    private var userUpdatesJob: Job? = null
+
     fun saveDayEntry(date: LocalDate, score: Double, note: String, aiFeedback: String) {
         viewModelScope.launch {
             try {
+                val timestamp = System.currentTimeMillis()
                 val entity = MyDayEntity(
                     date = date,
                     score = score,
                     note = note,
-                    lastUpdated = System.currentTimeMillis(),
+                    lastUpdated = timestamp,
                     aiFeedback = aiFeedback
                 )
-                myDayRepository.saveOrUpdateDayEntity(date, score, note, aiFeedback) // сохранение в базе данных локально
+                myDayRepository.saveOrUpdateDayEntity(
+                    date = date,
+                    score = score,
+                    note = note,
+                    aiFeedback = aiFeedback,
+                    lastUpdated = timestamp
+                ) // сохранение в базе данных локально
 
                 // 2. В Firestore только если пользователь авторизован
                 val uid = auth.currentUser?.uid
@@ -98,32 +108,42 @@ class MyDayViewModel @Inject constructor(
     //Firestore Database
     fun subscribeToUserRealtimeUpdates() {
         val uid = Firebase.auth.currentUser?.uid ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            firestoreUserDaysFlow(uid).collect { dtoList ->
-                for (dto in dtoList) {
-                    val remoteEntity = MyDayEntity(
-                        date = LocalDate.parse(dto.date),
-                        score = dto.score,
-                        note = dto.note,
-                        lastUpdated = dto.lastUpdated,
-                        aiFeedback = dto.aiFeedback
-                    )
-
-                    val localEntity = myDayRepository.getEntityByDate(remoteEntity.date).firstOrNull()
-
-                    if (remoteEntity.lastUpdated > (localEntity?.lastUpdated ?: 0L)) {
-                        myDayRepository.saveOrUpdateDayEntity(
-                            date = remoteEntity.date,
-                            score = remoteEntity.score,
-                            note = remoteEntity.note,
-                            aiFeedback = remoteEntity.aiFeedback
+        // Отменяем предыдущую подписку, если была
+        userUpdatesJob?.cancel()
+        userUpdatesJob = viewModelScope.launch(Dispatchers.IO) {
+            try {
+                firestoreUserDaysFlow(uid).collect { dtoList ->
+                    for (dto in dtoList) {
+                        val remoteEntity = MyDayEntity(
+                            date = LocalDate.parse(dto.date),
+                            score = dto.score,
+                            note = dto.note,
+                            lastUpdated = dto.lastUpdated,
+                            aiFeedback = dto.aiFeedback
                         )
-                    } else {
-                        //Log.d("Firestore", "Local data is newer or same, skip update for ${remoteEntity.date}")
+
+                        val localEntity = myDayRepository.getEntityByDate(remoteEntity.date).firstOrNull()
+
+                        if (remoteEntity.lastUpdated > (localEntity?.lastUpdated ?: 0L)) {
+                            myDayRepository.saveOrUpdateDayEntity(
+                                date = remoteEntity.date,
+                                score = remoteEntity.score,
+                                note = remoteEntity.note,
+                                aiFeedback = remoteEntity.aiFeedback,
+                                lastUpdated = remoteEntity.lastUpdated
+                            )
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                Log.e("Firestore", "Realtime updates error: ${e.message}")
             }
         }
+    }
+
+    fun stopUserRealtimeUpdates() {
+        userUpdatesJob?.cancel()
+        userUpdatesJob = null
     }
 
     private fun firestoreUserDaysFlow(uid: String) = callbackFlow<List<MyDayFirebaseDTO>> {
@@ -132,7 +152,9 @@ class MyDayViewModel @Inject constructor(
             .collection("days")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error) // Закрываем Flow при ошибке
+                    // Не пробрасываем исключение наружу, чтобы не крэшить приложение
+                    Log.w("Firestore", "Snapshot error: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
 
@@ -160,10 +182,24 @@ class MyDayViewModel @Inject constructor(
                 // Получаем все локальные записи
                 val localEntries = myDayRepository.getAllLocalEntries()
 
-                // Просто вызываем saveDayEntry для каждой записи
-                // Это автоматически обработает логику сравнения и сохранения
+                // Сохраняем в облако с сохранением исходного lastUpdated
                 for (entry in localEntries) {
-                    saveDayEntry(entry.date, entry.score, entry.note, entry.aiFeedback)
+                    val entity = MyDayEntity(
+                        date = entry.date,
+                        score = entry.score,
+                        note = entry.note,
+                        lastUpdated = entry.lastUpdated,
+                        aiFeedback = entry.aiFeedback
+                    )
+                    val uid = auth.currentUser?.uid
+                    myDayRepository.saveOrUpdateDayEntity(
+                        date = entity.date,
+                        score = entity.score,
+                        note = entity.note,
+                        aiFeedback = entity.aiFeedback,
+                        lastUpdated = entity.lastUpdated
+                    )
+                    if (uid != null) sendToFirestore(entity, uid)
                 }
 
                 Log.d("Sync", "Local to cloud sync completed")
