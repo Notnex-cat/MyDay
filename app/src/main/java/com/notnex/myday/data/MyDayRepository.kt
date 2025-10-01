@@ -1,8 +1,8 @@
 package com.notnex.myday.data
 
-import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
+import javax.inject.Inject
 
 class MyDayRepository @Inject constructor(val dao: MyDayDAO) {
     fun getEntityByDate(date: LocalDate): Flow<MyDayEntity?> = dao.getEntry(date)
@@ -23,7 +23,7 @@ class MyDayRepository @Inject constructor(val dao: MyDayDAO) {
             else -> return // ничего не изменилось — выходим
         }
 
-        dao.insert(updated)
+        dao.insertOfDay(updated)
     }
 
     suspend fun getAllLocalEntries(): List<MyDayEntity> = dao.getFullEntry()

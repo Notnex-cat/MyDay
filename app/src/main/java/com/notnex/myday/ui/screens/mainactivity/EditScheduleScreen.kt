@@ -37,7 +37,6 @@ fun EditScheduleScreen(
                 Text(
                     item,
                     fontSize = 25.sp,
-                    //style = MaterialTheme.typography.titleLarge.copy(color = Color.White),
                     modifier = Modifier.padding(16.dp)
                 )
             }

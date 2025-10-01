@@ -21,11 +21,18 @@ interface MyDayDAO {
     suspend fun getEntryOnce(date: LocalDate): MyDayEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(entry: MyDayEntity)
+    suspend fun insertOfDay(entry: MyDayEntity)
 
     @Update
     suspend fun update(entry: MyDayEntity)
 
     @Delete
     suspend fun delete(entry: MyDayEntity)
+
+
+    @Query("SELECT * FROM day_entries WHERE date = :date LIMIT 1")
+    fun getSchedule(date: LocalDate): Flow<MyDayEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertInSchedule(entry: MyDayEntity)
 }
