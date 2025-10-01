@@ -1,4 +1,4 @@
-package com.notnex.myday.ui.screens
+package com.notnex.myday.ui.screens.mainactivity
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -139,7 +139,7 @@ fun SharedTransitionScope.MainScreen(
                             IconButton(onClick = {
                                 val intent = Intent(context, Settings::class.java)
                                 context.startActivity(intent)
-                                    //navController.navigate(Screen.SettingScreen.route)
+                                //navController.navigate(Screen.SettingScreen.route)
                             }) {
                                 val avatarUrl = state.user?.profilePictureUrl
 
@@ -167,7 +167,8 @@ fun SharedTransitionScope.MainScreen(
                 },
                 floatingActionButton = { //кнопка снизу
 
-                    val isInExpandableScreen = remember { mutableStateOf(true) } // Или derive от NavController
+                    val isInExpandableScreen =
+                        remember { mutableStateOf(true) } // Или derive от NavController
 
                     CustomFloatingActionButton(
                         navController = navController,
@@ -195,7 +196,8 @@ fun SharedTransitionScope.MainScreen(
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
                             weekDates.forEach { date ->
-                                val isSelected = date == selectedDate // это такие сложные условия оба
+                                val isSelected =
+                                    date == selectedDate // это такие сложные условия оба
                                 val isToday = date == LocalDate.now() //
 
                                 Column(
@@ -227,7 +229,8 @@ fun SharedTransitionScope.MainScreen(
                         }
                     }
 
-                    val fullDB by myDayViewModel.getScore(selectedDate).collectAsState(initial = null)
+                    val fullDB by myDayViewModel.getScore(selectedDate)
+                        .collectAsState(initial = null)
 
                     val currentRating = fullDB?.score ?: 4.5
 
@@ -266,20 +269,27 @@ fun SharedTransitionScope.MainScreen(
                                 maxLines = 10
                             )
                         }
-                        Box(modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
+                        Box(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
                             contentAlignment = Alignment.Center
-                        ){
+                        ) {
                             RatingBar( // рейтинг дня
                                 modifier = Modifier
-                                    .size(100.dp),
+                                    .size(50.dp),
                                 rating = currentRating,
                                 onRatingChanged = { newRating ->
                                     val date = currentDateState.value
                                     val noteText = currentfullDBState.value?.note.orEmpty()
-                                    val aiResponseText = currentfullDBState.value?.aiFeedback.orEmpty()
-                                    myDayViewModel.saveDayEntry(date, newRating, noteText, aiResponseText)
+                                    val aiResponseText =
+                                        currentfullDBState.value?.aiFeedback.orEmpty()
+                                    myDayViewModel.saveDayEntry(
+                                        date,
+                                        newRating,
+                                        noteText,
+                                        aiResponseText
+                                    )
                                 },
                                 starsColor = when {
                                     currentRating >= 4.0 -> Color.Green

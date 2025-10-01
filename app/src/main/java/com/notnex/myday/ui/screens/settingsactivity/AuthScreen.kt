@@ -1,4 +1,4 @@
-package com.notnex.myday.ui.screens
+package com.notnex.myday.ui.screens.settingsactivity
 
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -45,6 +45,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthViewModel
@@ -155,9 +156,9 @@ fun AuthScreen(
 
             Button(onClick = {
                 oneTapClient.beginSignIn(
-                    com.google.android.gms.auth.api.identity.BeginSignInRequest.Builder()
+                    BeginSignInRequest.Builder()
                         .setGoogleIdTokenRequestOptions(
-                            com.google.android.gms.auth.api.identity.BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
+                            BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
                                 .setSupported(true)
                                 .setFilterByAuthorizedAccounts(false)
                                 .setServerClientId(context.getString(R.string.web_client_id))

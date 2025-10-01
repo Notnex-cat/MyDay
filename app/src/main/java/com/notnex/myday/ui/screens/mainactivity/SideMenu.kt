@@ -1,4 +1,4 @@
-package com.notnex.myday.ui.screens
+package com.notnex.myday.ui.screens.mainactivity
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer

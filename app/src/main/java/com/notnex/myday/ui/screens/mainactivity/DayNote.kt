@@ -1,4 +1,4 @@
-package com.notnex.myday.ui.screens
+package com.notnex.myday.ui.screens.mainactivity
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.notnex.myday.BuildConfig
 import com.notnex.myday.R
 import com.notnex.myday.neuralnetwork.NNResult
 import com.notnex.myday.neuralnetwork.NNViewModel
@@ -81,8 +80,6 @@ fun SharedTransitionScope.DayNote(
         }
         aiResponse = fullDB?.aiFeedback ?: ""
     }
-
-    val apiKey = BuildConfig.NN_API_KEY
 
     Scaffold(
         modifier = Modifier

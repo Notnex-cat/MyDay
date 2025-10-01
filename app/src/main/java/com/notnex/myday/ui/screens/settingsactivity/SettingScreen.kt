@@ -1,4 +1,4 @@
-package com.notnex.myday.ui.screens
+package com.notnex.myday.ui.screens.settingsactivity
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -49,6 +49,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthState
+import com.notnex.myday.viewmodel.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("ContextCastToActivity", "SuspiciousIndentation")
@@ -106,7 +107,7 @@ fun SettingsScreen(
                     .padding(16.dp)
                     .clickable {
                         if (state.user == null) {
-                            navController.navigate(com.notnex.myday.viewmodel.Screen.Auth.route)
+                            navController.navigate(Screen.Auth.route)
                         }
                     }
             ) {

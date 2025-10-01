@@ -17,15 +17,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.notnex.myday.ui.screens.DayNote
-import com.notnex.myday.ui.screens.MainScreen
-import com.notnex.myday.ui.screens.ScheduleScreen
+import androidx.navigation.toRoute
+import com.notnex.myday.ui.screens.mainactivity.DayNote
+import com.notnex.myday.ui.screens.mainactivity.EditScheduleScreen
+import com.notnex.myday.ui.screens.mainactivity.MainScreen
+import com.notnex.myday.ui.screens.mainactivity.ScheduleScreen
 import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.Screen
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
 
 const val CARD_EXPLODE_BOUNDS_KEY = "CARD_EXPLODE_BOUNDS_KEY"
 
@@ -62,14 +64,6 @@ class MainActivity: ComponentActivity() {
                                         type = NavType.StringType
                                         nullable = false
                                     },
-//                                    navArgument("currentRating") {
-//                                        type = NavType.FloatType
-//                                        nullable = false
-//                                    },
-//                                    navArgument("note") {
-//                                        type = NavType.StringType
-//                                        nullable = true
-//                                    }
                                 )
                             ) { entry ->
                                 val dateString = entry.arguments?.getString("date")
@@ -78,10 +72,6 @@ class MainActivity: ComponentActivity() {
                                 } catch (_: Exception) {
                                     LocalDate.now()
                                 }
-//                                val currentRating =
-//                                    entry.arguments?.getFloat("currentRating")?.toDouble() ?: 0.0
-//                                val note = entry.arguments?.getString("note") ?: ""
-
                                 DayNote(
                                     navController = navController,
                                     date = date,
@@ -90,11 +80,18 @@ class MainActivity: ComponentActivity() {
                                     animatedVisibilityScope = this
                                 )
                             }
-                            composable(
-                                route = Screen.ScheduleScreen.route
-                            ) {
-                                ScheduleScreen()
+                            composable<ScreenSchedule>
+                            {
+                                ScheduleScreen(
+                                    navController = navController
+                                )
                             }
+
+                            composable<ScreenEditSchedule> { backStackEntry ->
+                                val args = backStackEntry.toRoute<ScreenEditSchedule>()
+                                EditScheduleScreen(navController, args.item)
+                            }
+
                         }
                     }
                 }
@@ -102,3 +99,11 @@ class MainActivity: ComponentActivity() {
         }
     }
 }
+
+@Serializable
+object ScreenSchedule
+
+@Serializable
+data class ScreenEditSchedule(
+    val item: String
+)

@@ -1,5 +1,7 @@
-package com.notnex.myday.ui.screens
+package com.notnex.myday.ui.screens.mainactivity
 
+import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -19,18 +22,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import com.notnex.myday.neuralnetwork.NNResult
 import com.notnex.myday.neuralnetwork.NNViewModel
 import com.notnex.myday.neuralnetwork.ScheduleItem
+import com.notnex.myday.ui.ScreenEditSchedule
 
 @Composable
 fun ScheduleScreen(
+    navController: NavController,
     nnViewModel: NNViewModel = hiltViewModel(),
 ) {
     var userInput by remember { mutableStateOf("") }
     val state by nnViewModel.scheduleState.collectAsState()
+
+    val context = LocalContext.current
     Scaffold { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             OutlinedTextField(
@@ -58,7 +67,29 @@ fun ScheduleScreen(
                     val schedule = (state as NNResult.Success<List<ScheduleItem>>).data
                     LazyColumn {
                         items(schedule) { item ->
-                            Text("${item.time} — ${item.task}", modifier = Modifier.padding(4.dp))
+                            Card(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(4.dp)
+                                    .clickable {
+                                        navController.navigate(ScreenEditSchedule(item = item.task))
+                                    }
+                            ) {
+                                Text(
+                                    "${item.time} — ${item.task}",
+                                    modifier = Modifier.padding(14.dp)
+                                )
+                            }
+
+                        }
+                        item {
+                            Button(
+                                onClick = {
+                                    Toast.makeText(context, "Сохранено", Toast.LENGTH_SHORT).show()
+                                },
+                            ) {
+                                Text("Save")
+                            }
                         }
                     }
                 }

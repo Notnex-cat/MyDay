@@ -14,4 +14,5 @@
     <string name="password">Password</string>
     <string name="log_in_error">Write login and password</string>
     <string name="sign_in_with_google">Sing in with Google</string>
+    <string name="edit">"Edit: "</string>
 </resources>

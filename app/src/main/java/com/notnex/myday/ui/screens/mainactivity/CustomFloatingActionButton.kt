@@ -1,4 +1,4 @@
-package com.notnex.myday.ui.screens
+package com.notnex.myday.ui.screens.mainactivity
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.EaseInOut
@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +34,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.notnex.myday.viewmodel.Screen
+import com.notnex.myday.ui.ScreenSchedule
 
 
 @Composable
@@ -74,10 +74,10 @@ fun CustomFloatingActionButton(
                     )
                     .padding(vertical = 12.dp)
             ) {
-                TextButton(onClick = { navController.navigate(Screen.ScheduleScreen.route) }) {
-                    Icon(Icons.Default.NoteAdd, contentDescription = null)
+                TextButton(onClick = { navController.navigate(ScreenSchedule) }) {
+                    Icon(Icons.AutoMirrored.Default.MenuOpen, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Новая заметка")
+                    Text("Создать расписание")
                 }
 
                 TextButton(onClick = { /* TODO: Handle New Reminder */ }) {
