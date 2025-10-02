@@ -30,11 +30,13 @@ import com.notnex.myday.neuralnetwork.NNResult
 import com.notnex.myday.neuralnetwork.NNViewModel
 import com.notnex.myday.neuralnetwork.ScheduleItem
 import com.notnex.myday.ui.ScreenEditSchedule
+import com.notnex.myday.viewmodel.MyDayViewModel
 
 @Composable
 fun ScheduleScreen(
     navController: NavController,
     nnViewModel: NNViewModel = hiltViewModel(),
+    viewModel: MyDayViewModel = hiltViewModel()
 ) {
     var userInput by remember { mutableStateOf("") }
     val state by nnViewModel.scheduleState.collectAsState()
@@ -85,6 +87,7 @@ fun ScheduleScreen(
                         item {
                             Button(
                                 onClick = {
+                                    viewModel.saveDaySchedule()
                                     Toast.makeText(context, "Сохранено", Toast.LENGTH_SHORT).show()
                                 },
                             ) {

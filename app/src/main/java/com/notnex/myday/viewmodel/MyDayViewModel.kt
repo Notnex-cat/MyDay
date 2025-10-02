@@ -12,6 +12,7 @@ import com.google.firebase.firestore.ktx.firestore
 import com.notnex.myday.data.MyDayEntity
 import com.notnex.myday.data.MyDayFirebaseDTO
 import com.notnex.myday.data.MyDayRepository
+import com.notnex.myday.data.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,6 +29,7 @@ import javax.inject.Inject
 @HiltViewModel
 class MyDayViewModel @Inject constructor(
     private val myDayRepository: MyDayRepository,
+    private val scheduleRepository: ScheduleRepository
 ) : ViewModel() {
 
     //Database
@@ -67,6 +69,32 @@ class MyDayViewModel @Inject constructor(
                 } else {
                     Log.d("Firestore", "User not authenticated, skipping Firestore save")
                 }
+
+            } catch (e: Exception) {
+                Log.e("Firestore", "Save failed: ${e.message}")
+                _saveResult.value = Result.failure(e)
+            }
+        }
+    }
+
+    fun saveDaySchedule(scheduleDate: LocalDate, scheduleItem: String, note: String, score: Double, aiFeedback: String) {
+        viewModelScope.launch {
+            try {
+                val timestamp = System.currentTimeMillis()
+//                val entity = MyDayEntity(
+//                    date = scheduleDate,
+//                    score = score,
+//                    note = note,
+//                    lastUpdated = timestamp,
+//                    aiFeedback = aiFeedback
+//                )
+                scheduleRepository.saveOrUpdateScheduleEntity(
+                    date = scheduleDate,
+                    score = score,
+                    note = note,
+                    aiFeedback = aiFeedback,
+                    lastUpdated = timestamp
+                ) // сохранение в базе данных локально
 
             } catch (e: Exception) {
                 Log.e("Firestore", "Save failed: ${e.message}")

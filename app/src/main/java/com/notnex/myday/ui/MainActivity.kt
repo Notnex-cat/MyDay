@@ -83,6 +83,7 @@ class MainActivity: ComponentActivity() {
                             composable<ScreenSchedule>
                             {
                                 ScheduleScreen(
+                                    date = date,
                                     navController = navController
                                 )
                             }
