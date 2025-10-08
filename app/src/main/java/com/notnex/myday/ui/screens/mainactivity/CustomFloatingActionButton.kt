@@ -34,12 +34,14 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.notnex.myday.ui.ScreenSchedule
+import com.notnex.myday.viewmodel.Screen
+import java.time.LocalDate
 
 
 @Composable
 fun CustomFloatingActionButton(
     navController: NavController,
+    selectedDate: LocalDate,
     expandable: Boolean,
     onFabClick: () -> Unit,
     fabIcon: ImageVector
@@ -74,7 +76,10 @@ fun CustomFloatingActionButton(
                     )
                     .padding(vertical = 12.dp)
             ) {
-                TextButton(onClick = { navController.navigate(ScreenSchedule) }) {
+                TextButton(onClick = {
+                    navController.navigate("${Screen.ScheduleScreen.route}/${selectedDate}")
+                }
+                ) {
                     Icon(Icons.AutoMirrored.Default.MenuOpen, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Создать расписание")

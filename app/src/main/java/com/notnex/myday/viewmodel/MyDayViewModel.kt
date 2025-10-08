@@ -12,6 +12,7 @@ import com.google.firebase.firestore.ktx.firestore
 import com.notnex.myday.data.MyDayEntity
 import com.notnex.myday.data.MyDayFirebaseDTO
 import com.notnex.myday.data.MyDayRepository
+import com.notnex.myday.data.ScheduleEntity
 import com.notnex.myday.data.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -81,8 +82,9 @@ class MyDayViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val timestamp = System.currentTimeMillis()
-//                val entity = MyDayEntity(
-//                    date = scheduleDate,
+//                val entity = ScheduleEntity(
+//                    scheduleDate = scheduleDate,
+//                    scheduleItem = scheduleItem,
 //                    score = score,
 //                    note = note,
 //                    lastUpdated = timestamp,
@@ -90,10 +92,11 @@ class MyDayViewModel @Inject constructor(
 //                )
                 scheduleRepository.saveOrUpdateScheduleEntity(
                     date = scheduleDate,
+                    item = scheduleItem,
                     score = score,
                     note = note,
-                    aiFeedback = aiFeedback,
-                    lastUpdated = timestamp
+                    lastUpdated = timestamp,
+                    aiFeedback = aiFeedback
                 ) // сохранение в базе данных локально
 
             } catch (e: Exception) {

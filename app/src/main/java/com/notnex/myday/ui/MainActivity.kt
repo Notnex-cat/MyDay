@@ -80,11 +80,27 @@ class MainActivity: ComponentActivity() {
                                     animatedVisibilityScope = this
                                 )
                             }
-                            composable<ScreenSchedule>
-                            {
+                            composable(
+                                route = Screen.ScheduleScreen.route + "/{date}",
+                                arguments = listOf(
+                                    navArgument("date") {
+                                        type = NavType.StringType
+                                        nullable = false
+                                    },
+                                )
+                            )
+                            { entry ->
+                                val dateString = entry.arguments?.getString("date")
+                                val date = try {
+                                    LocalDate.parse(requireNotNull(dateString), dateFormatter)
+                                } catch (_: Exception) {
+                                    LocalDate.now()
+                                }
                                 ScheduleScreen(
+                                    navController = navController,
                                     date = date,
-                                    navController = navController
+                                    //currentRating = currentRating,
+                                    //note = note,
                                 )
                             }
 

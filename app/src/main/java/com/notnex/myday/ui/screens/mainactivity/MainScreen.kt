@@ -172,8 +172,10 @@ fun SharedTransitionScope.MainScreen(
 
                     CustomFloatingActionButton(
                         navController = navController,
+                        selectedDate = selectedDate,
                         expandable = isInExpandableScreen.value,
                         onFabClick = {
+                            //Toast.makeText(context, "open", Toast.LENGTH_SHORT).show()
                             // или логика открытия экрана создания события
                         },
                         fabIcon = Icons.Default.Add

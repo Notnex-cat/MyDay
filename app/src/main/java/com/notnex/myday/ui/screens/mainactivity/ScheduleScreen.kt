@@ -31,10 +31,12 @@ import com.notnex.myday.neuralnetwork.NNViewModel
 import com.notnex.myday.neuralnetwork.ScheduleItem
 import com.notnex.myday.ui.ScreenEditSchedule
 import com.notnex.myday.viewmodel.MyDayViewModel
+import java.time.LocalDate
 
 @Composable
 fun ScheduleScreen(
     navController: NavController,
+    date: LocalDate,
     nnViewModel: NNViewModel = hiltViewModel(),
     viewModel: MyDayViewModel = hiltViewModel()
 ) {
@@ -87,7 +89,7 @@ fun ScheduleScreen(
                         item {
                             Button(
                                 onClick = {
-                                    viewModel.saveDaySchedule()
+                                    viewModel.saveDaySchedule(date, "schedule", userInput, 4.5, "")
                                     Toast.makeText(context, "Сохранено", Toast.LENGTH_SHORT).show()
                                 },
                             ) {

@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "31117ddd0be7d403635a2f2d97e39bd4",
+    "identityHash": "b3b6fef1ab0f001e49aa57d22be7f6a6",
     "entities": [
       {
         "tableName": "day_entries",
@@ -48,7 +48,7 @@
       },
       {
         "tableName": "schedule_entries",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `scheduleDate` TEXT NOT NULL, `scheduleItem` TEXT NOT NULL, `note` TEXT NOT NULL, `score` INTEGER NOT NULL, `lastUpdated` INTEGER NOT NULL, `aiFeedback` TEXT NOT NULL, FOREIGN KEY(`scheduleDate`) REFERENCES `day_entries`(`date`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `scheduleDate` TEXT NOT NULL, `scheduleItem` TEXT NOT NULL, `note` TEXT NOT NULL, `score` REAL NOT NULL, `lastUpdated` INTEGER NOT NULL, `aiFeedback` TEXT NOT NULL, FOREIGN KEY(`scheduleDate`) REFERENCES `day_entries`(`date`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -77,7 +77,7 @@
           {
             "fieldPath": "score",
             "columnName": "score",
-            "affinity": "INTEGER",
+            "affinity": "REAL",
             "notNull": true
           },
           {
@@ -127,7 +127,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '31117ddd0be7d403635a2f2d97e39bd4')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b3b6fef1ab0f001e49aa57d22be7f6a6')"
     ]
   }
 }
