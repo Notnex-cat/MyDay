@@ -87,12 +87,13 @@ fun ScheduleScreen(
 
                         }
                         item {
-                            Button(
-                                onClick = {
-                                    viewModel.saveDaySchedule(date, "schedule", userInput, 4.5, "")
-                                    Toast.makeText(context, "Сохранено", Toast.LENGTH_SHORT).show()
-                                },
-                            ) {
+                            Button(onClick = {
+                                schedule.forEach { item ->
+                                    val itemString = "${item.time} — ${item.task}"
+                                    viewModel.saveDaySchedule(date, itemString, "", 4.5, "")
+                                }
+                                Toast.makeText(context, "Сохранено ${schedule.size} элементов", Toast.LENGTH_SHORT).show()
+                            }) {
                                 Text("Save")
                             }
                         }

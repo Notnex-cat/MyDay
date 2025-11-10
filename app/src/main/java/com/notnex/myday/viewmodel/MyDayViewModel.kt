@@ -3,6 +3,7 @@ package com.notnex.myday.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.play.core.integrity.d
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.auth.ktx.auth
@@ -37,6 +38,9 @@ class MyDayViewModel @Inject constructor(
     private val _saveResult = MutableStateFlow(Result.success(Unit))
 
     fun getScore(date: LocalDate) = myDayRepository.getEntityByDate(date)
+
+    fun getSchedule(date: LocalDate) = scheduleRepository.getScheduleByDate(date)
+
 
     private val auth = Firebase.auth
 

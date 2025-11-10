@@ -234,6 +234,9 @@ fun SharedTransitionScope.MainScreen(
                     val fullDB by myDayViewModel.getScore(selectedDate)
                         .collectAsState(initial = null)
 
+                    val fullSchedule by myDayViewModel.getSchedule(selectedDate)
+                        .collectAsState(initial = null)
+
                     val currentRating = fullDB?.score ?: 4.5
 
                     val text = fullDB?.note ?: ""
@@ -300,6 +303,9 @@ fun SharedTransitionScope.MainScreen(
                                 }
                             )
                         }
+                        Text(
+                            text = fullSchedule.toString()
+                        )
                     }
                 }
             }

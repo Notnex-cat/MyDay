@@ -7,7 +7,7 @@ import javax.inject.Inject
 
 
 class ScheduleRepository @Inject constructor(val dao: MyScheduleDAO) {
-    fun getEntityByDate(date: LocalDate): Flow<List<ScheduleEntity>> = dao.getDayWithSchedules(date)
+    fun getScheduleByDate(date: LocalDate): Flow<List<ScheduleEntity>> = dao.getDayWithSchedules(date)
 
     suspend fun saveOrUpdateScheduleEntity(
         date: LocalDate,
