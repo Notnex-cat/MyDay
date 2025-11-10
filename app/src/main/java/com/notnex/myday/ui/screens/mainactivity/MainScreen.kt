@@ -234,15 +234,17 @@ fun SharedTransitionScope.MainScreen(
                     val fullDB by myDayViewModel.getScore(selectedDate)
                         .collectAsState(initial = null)
 
-                    val fullSchedule by myDayViewModel.getSchedule(selectedDate)
-                        .collectAsState(initial = null)
-
                     val currentRating = fullDB?.score ?: 4.5
 
                     val text = fullDB?.note ?: ""
 
                     val currentDateState = rememberUpdatedState(selectedDate)
                     val currentfullDBState = rememberUpdatedState(fullDB) //это прям объект всей БД
+
+                    val fullSchedule by myDayViewModel.getFullSchedule(selectedDate)
+                        .collectAsState(initial = null)
+
+                    val currentfullDBScheduleState = rememberUpdatedState(fullSchedule) //это прям объект всей БД
 
                     Column {
                         ElevatedCard( // текст о дне

@@ -31,6 +31,8 @@ android {
 
         buildConfigField("String", "NN_API_KEY", "\"$nnApiKey\"")
     }
+
+
     kapt {
         arguments {
             arg("room.schemaLocation", "$projectDir/schemas")

@@ -37,7 +37,7 @@ class ScheduleRepository @Inject constructor(val dao: MyScheduleDAO) {
     }
 
 
-    // suspend fun getAllLocalEntries(): List<MyDayEntity> = dao.getFullEntry()
+    //suspend fun getAllLocalEntries(): List<MyDayEntity> = dao.getFullEntry()
 
    // suspend fun deleteEntry(entry: MyDayEntity) = dao.delete(entry) //рудимент
 }
