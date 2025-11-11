@@ -13,6 +13,7 @@ import com.google.firebase.firestore.ktx.firestore
 import com.notnex.myday.data.MyDayEntity
 import com.notnex.myday.data.MyDayFirebaseDTO
 import com.notnex.myday.data.MyDayRepository
+import com.notnex.myday.data.MyScheduleFirebaseDTO
 import com.notnex.myday.data.ScheduleEntity
 import com.notnex.myday.data.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlin.String
 
 @HiltViewModel
 class MyDayViewModel @Inject constructor(
@@ -86,14 +88,14 @@ class MyDayViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val timestamp = System.currentTimeMillis()
-//                val entity = ScheduleEntity(
-//                    scheduleDate = scheduleDate,
-//                    scheduleItem = scheduleItem,
-//                    score = score,
-//                    note = note,
-//                    lastUpdated = timestamp,
-//                    aiFeedback = aiFeedback
-//                )
+                val entity = ScheduleEntity(
+                    scheduleDate = scheduleDate,
+                    scheduleItem = scheduleItem,
+                    score = score,
+                    note = note,
+                    lastUpdated = timestamp,
+                    aiFeedback = aiFeedback
+                )
                 scheduleRepository.saveOrUpdateScheduleEntity(
                     date = scheduleDate,
                     item = scheduleItem,

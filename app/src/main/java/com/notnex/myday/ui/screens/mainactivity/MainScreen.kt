@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerValue
@@ -62,6 +65,7 @@ import coil.compose.AsyncImage
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthViewModel
 import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
+import com.notnex.myday.ui.ScreenEditSchedule
 import com.notnex.myday.ui.Settings
 import com.notnex.myday.ui.theme.RatingBar
 import com.notnex.myday.viewmodel.MyDayViewModel
@@ -241,11 +245,6 @@ fun SharedTransitionScope.MainScreen(
                     val currentDateState = rememberUpdatedState(selectedDate)
                     val currentfullDBState = rememberUpdatedState(fullDB) //это прям объект всей БД
 
-                    val fullSchedule by myDayViewModel.getFullSchedule(selectedDate)
-                        .collectAsState(initial = null)
-
-                    val currentfullDBScheduleState = rememberUpdatedState(fullSchedule) //это прям объект всей БД
-
                     Column {
                         ElevatedCard( // текст о дне
                             elevation = CardDefaults.cardElevation(
@@ -305,9 +304,34 @@ fun SharedTransitionScope.MainScreen(
                                 }
                             )
                         }
-                        Text(
-                            text = fullSchedule.toString()
-                        )
+
+                        val fullSchedule by myDayViewModel.getSchedule(selectedDate)
+                            .collectAsState(initial = null)
+
+                        val currentFullDBScheduleState = rememberUpdatedState(fullSchedule) //это прям объект всей БД
+
+                        val schedule = currentFullDBScheduleState.value
+
+                        LazyColumn {
+                            items(
+                                items = schedule ?: emptyList(),
+                                key = { item -> item.hashCode() }
+                            ) { item ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(4.dp)
+                                        .clickable {
+                                            navController.navigate(ScreenEditSchedule(item = item.scheduleItem))
+                                        }
+                                ) {
+                                    Text(
+                                        text = item.scheduleItem,
+                                        modifier = Modifier.padding(14.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

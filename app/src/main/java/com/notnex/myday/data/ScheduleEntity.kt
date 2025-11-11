@@ -1,5 +1,6 @@
 package com.notnex.myday.data
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -27,4 +28,14 @@ data class ScheduleEntity(
     val score: Double,                                    // оценка (например, насколько хорошо выполнил)
     val lastUpdated: Long = System.currentTimeMillis(),
     val aiFeedback: String
+)
+
+@Immutable
+data class MyScheduleFirebaseDTO(
+    val scheduleDate: String = "",                       // внешний ключ
+    val scheduleItem: String = "",                          // название пункта (подъём, завтрак)
+    val note: String  = "",                                  // комментарий
+    val score: Double = 0.0,                                    // оценка (например, насколько хорошо выполнил)
+    val lastUpdated: Long = 0L,
+    val aiFeedback: String = ""
 )
