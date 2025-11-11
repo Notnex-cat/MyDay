@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
+import java.util.UUID
 import javax.inject.Inject
 import kotlin.String
 
@@ -105,6 +106,14 @@ class MyDayViewModel @Inject constructor(
                     aiFeedback = aiFeedback
                 ) // сохранение в базе данных локально
 
+                // 2. В Firestore только если пользователь авторизован
+                val uid = auth.currentUser?.uid
+                if (uid != null) {
+                    sendScheduleToFirestore(entity, uid)
+                } else {
+                    Log.d("Firestore", "User not authenticated, skipping Firestore save")
+                }
+
             } catch (e: Exception) {
                 Log.e("Firestore", "Save failed: ${e.message}")
                 _saveResult.value = Result.failure(e)
@@ -136,6 +145,39 @@ class MyDayViewModel @Inject constructor(
         if (remote == null || entity.lastUpdated > remote.lastUpdated) {
             docRef.set(dto, SetOptions.merge()).await()
             Log.d("Firestore", "Saved to Firestore for user $uid, date ${entity.date}")
+        } else {
+            Log.d("Firestore", "Remote data is newer or same, skip upload")
+        }
+    }
+
+    private suspend fun sendScheduleToFirestore(entity: ScheduleEntity, uid: String) {
+        // Подготавливаем DTO
+        val dto = MyScheduleFirebaseDTO(
+            id = entity.id,
+            scheduleItem = entity.scheduleItem,
+            score = entity.score,
+            note = entity.note,
+            lastUpdated = entity.lastUpdated,
+            aiFeedback = entity.aiFeedback
+        )
+
+        val docRef = fstore
+            .collection("users")
+            .document(uid)
+            .collection("days")
+            .document(entity.scheduleDate.toString())
+            .collection("schedule")
+            .document(UUID.randomUUID().toString())
+
+
+        // Загружаем текущее облачное состояние (если есть)
+        val snapshot = docRef.get().await()
+        val remote = snapshot.toObject(MyScheduleFirebaseDTO::class.java)
+
+        // Сравнение по lastUpdated
+        if (remote == null || entity.lastUpdated > remote.lastUpdated) {
+            docRef.set(dto, SetOptions.merge()).await()
+            Log.d("Firestore", "Saved to Firestore for user $uid, date ${entity.scheduleDate}")
         } else {
             Log.d("Firestore", "Remote data is newer or same, skip upload")
         }
@@ -237,6 +279,7 @@ class MyDayViewModel @Inject constructor(
                         lastUpdated = entity.lastUpdated
                     )
                     if (uid != null) sendToFirestore(entity, uid)
+                    //для расписания тоже нужно сделать
                 }
 
                 Log.d("Sync", "Local to cloud sync completed")

@@ -32,7 +32,7 @@ data class ScheduleEntity(
 
 @Immutable
 data class MyScheduleFirebaseDTO(
-    val scheduleDate: String = "",                       // внешний ключ
+    val id: Long = 0,                      // внешний ключ
     val scheduleItem: String = "",                          // название пункта (подъём, завтрак)
     val note: String  = "",                                  // комментарий
     val score: Double = 0.0,                                    // оценка (например, насколько хорошо выполнил)
