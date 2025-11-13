@@ -21,7 +21,7 @@ import java.time.LocalDate
 )
 
 data class ScheduleEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0, // PK каждой записи
+    @PrimaryKey val id: String, // PK каждой записи
     val scheduleDate: LocalDate,                       // внешний ключ
     val scheduleItem: String,                          // название пункта (подъём, завтрак)
     val note: String,                                  // комментарий
@@ -32,7 +32,7 @@ data class ScheduleEntity(
 
 @Immutable
 data class MyScheduleFirebaseDTO(
-    val id: Long = 0,                      // внешний ключ
+    val id: String = "",                                        // внешний ключ
     val scheduleItem: String = "",                          // название пункта (подъём, завтрак)
     val note: String  = "",                                  // комментарий
     val score: Double = 0.0,                                    // оценка (например, насколько хорошо выполнил)

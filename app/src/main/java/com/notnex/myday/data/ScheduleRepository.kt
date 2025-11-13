@@ -10,6 +10,7 @@ class ScheduleRepository @Inject constructor(val dao: MyScheduleDAO) {
     fun getScheduleByDate(date: LocalDate): Flow<List<ScheduleEntity>> = dao.getDayWithSchedules(date)
 
     suspend fun saveOrUpdateScheduleEntity(
+        id: String,
         date: LocalDate,
         item: String,
         score: Double,
@@ -21,6 +22,7 @@ class ScheduleRepository @Inject constructor(val dao: MyScheduleDAO) {
             .firstOrNull()
 
         val entity = ScheduleEntity(
+            id = id,
             scheduleDate = date,
             scheduleItem = item,
             score = score,

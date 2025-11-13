@@ -36,7 +36,7 @@ class NNViewModel @Inject constructor(
     val responseState: StateFlow<NNResult<Unit>> = _responseState
 
     val apiKey = BuildConfig.NN_API_KEY
-    private val model = "mistral-medium-latest"
+    private val model = "mistral-small-latest"
     private val endpoint = "https://api.mistral.ai/v1/chat/completions"
     private val mediaType = "application/json".toMediaType()
 

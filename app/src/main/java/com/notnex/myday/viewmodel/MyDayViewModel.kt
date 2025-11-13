@@ -3,13 +3,10 @@ package com.notnex.myday.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.play.core.integrity.d
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
-import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
-import com.google.firebase.firestore.ktx.firestore
 import com.notnex.myday.data.MyDayEntity
 import com.notnex.myday.data.MyDayFirebaseDTO
 import com.notnex.myday.data.MyDayRepository
@@ -27,7 +24,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
-import java.util.UUID
 import javax.inject.Inject
 import kotlin.String
 
@@ -85,11 +81,12 @@ class MyDayViewModel @Inject constructor(
         }
     }
 
-    fun saveDaySchedule(scheduleDate: LocalDate, scheduleItem: String, note: String, score: Double, aiFeedback: String) {
+    fun saveDaySchedule(id: String, scheduleDate: LocalDate, scheduleItem: String, note: String, score: Double, aiFeedback: String) {
         viewModelScope.launch {
             try {
                 val timestamp = System.currentTimeMillis()
                 val entity = ScheduleEntity(
+                    id = id,
                     scheduleDate = scheduleDate,
                     scheduleItem = scheduleItem,
                     score = score,
@@ -98,6 +95,7 @@ class MyDayViewModel @Inject constructor(
                     aiFeedback = aiFeedback
                 )
                 scheduleRepository.saveOrUpdateScheduleEntity(
+                    id = id,
                     date = scheduleDate,
                     item = scheduleItem,
                     score = score,
@@ -167,7 +165,8 @@ class MyDayViewModel @Inject constructor(
             .collection("days")
             .document(entity.scheduleDate.toString())
             .collection("schedule")
-            .document(UUID.randomUUID().toString())
+            .document(entity.id.toString())
+        print("11")
 
 
         // Загружаем текущее облачное состояние (если есть)
@@ -177,7 +176,7 @@ class MyDayViewModel @Inject constructor(
         // Сравнение по lastUpdated
         if (remote == null || entity.lastUpdated > remote.lastUpdated) {
             docRef.set(dto, SetOptions.merge()).await()
-            Log.d("Firestore", "Saved to Firestore for user $uid, date ${entity.scheduleDate}")
+            Log.d("Firestore", "Saved to Firestore for user $uid, date ${entity.scheduleDate} ${entity.id}")
         } else {
             Log.d("Firestore", "Remote data is newer or same, skip upload")
         }
