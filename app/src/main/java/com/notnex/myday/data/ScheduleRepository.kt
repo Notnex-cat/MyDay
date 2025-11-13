@@ -1,7 +1,6 @@
 package com.notnex.myday.data
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.firstOrNull
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -18,8 +17,6 @@ class ScheduleRepository @Inject constructor(val dao: MyScheduleDAO) {
         aiFeedback: String,
         lastUpdated: Long
     ) {
-        val existing = dao.getDayWithSchedules(date)
-            .firstOrNull()
 
         val entity = ScheduleEntity(
             id = id,
@@ -31,15 +28,12 @@ class ScheduleRepository @Inject constructor(val dao: MyScheduleDAO) {
             aiFeedback = aiFeedback
         )
 
-        if (existing == null) {
-            dao.insertScheduleItem(entity)
-        } else {
-            dao.insertScheduleItem(entity)
-        }
+        dao.insertScheduleItem(entity)
+
     }
 
 
     //suspend fun getAllLocalEntries(): List<MyDayEntity> = dao.getFullEntry()
 
-   // suspend fun deleteEntry(entry: MyDayEntity) = dao.delete(entry) //рудимент
+   suspend fun deleteItem(id: String) = dao.deleteById(id, date)
 }

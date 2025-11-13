@@ -326,7 +326,7 @@ fun SharedTransitionScope.MainScreen(
                                         }
                                 ) {
                                     Text(
-                                        text = item.scheduleItem,
+                                        text = "${item.id} - ${item.scheduleItem}",
                                         modifier = Modifier.padding(14.dp)
                                     )
                                 }

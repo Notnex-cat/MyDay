@@ -106,7 +106,7 @@ class MainActivity: ComponentActivity() {
 
                             composable<ScreenEditSchedule> { backStackEntry ->
                                 val args = backStackEntry.toRoute<ScreenEditSchedule>()
-                                EditScheduleScreen(navController, args.item)
+                                EditScheduleScreen(navController, args.id, args.item)
                             }
 
                         }
@@ -122,5 +122,8 @@ object ScreenSchedule
 
 @Serializable
 data class ScreenEditSchedule(
-    val item: String
+    val id: String,
+    val item: String,
+    val date: String,
+    val time: String
 )

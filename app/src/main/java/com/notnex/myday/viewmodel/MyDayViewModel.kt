@@ -182,6 +182,10 @@ class MyDayViewModel @Inject constructor(
         }
     }
 
+    fun deleteScheduleItem(id: String, date: String){
+        scheduleRepository.deleteItem(id, date)
+    }
+
     //Firebase
     //Firestore Database
     fun subscribeToUserRealtimeUpdates() {

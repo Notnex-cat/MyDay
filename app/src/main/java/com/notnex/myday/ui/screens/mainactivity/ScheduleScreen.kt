@@ -76,7 +76,12 @@ fun ScheduleScreen(
                                     .fillMaxWidth()
                                     .padding(4.dp)
                                     .clickable {
-                                        navController.navigate(ScreenEditSchedule(item = item.task))
+                                        navController.navigate(ScreenEditSchedule(
+                                            id = item.id,
+                                            date = item.date,
+                                            time = item.time,
+                                            item = item.task,
+                                        ))
                                     }
                             ) {
                                 Text(
