@@ -106,7 +106,17 @@ class MainActivity: ComponentActivity() {
 
                             composable<ScreenEditSchedule> { backStackEntry ->
                                 val args = backStackEntry.toRoute<ScreenEditSchedule>()
-                                EditScheduleScreen(navController, args.id, args.item)
+                                val date = try {
+                                    LocalDate.parse(args.date, dateFormatter)
+                                } catch (_: Exception) {
+                                    LocalDate.now()
+                                }
+                                EditScheduleScreen(
+                                    navController = navController,
+                                    id = args.id,
+                                    date = date,
+                                    item = args.item
+                                )
                             }
 
                         }

@@ -84,6 +84,35 @@ class MyDayViewModel @Inject constructor(
     fun saveDaySchedule(id: String, scheduleDate: LocalDate, scheduleItem: String, note: String, score: Double, aiFeedback: String) {
         viewModelScope.launch {
             try {
+                // Проверяем, существует ли запись дня для этой даты
+                // Если нет - создаем пустую запись, чтобы ForeignKey не блокировал сохранение расписания
+                val existingDay = myDayRepository.getEntityByDate(scheduleDate).firstOrNull()
+                if (existingDay == null) {
+                    // Создаем пустую запись дня с дефолтными значениями
+                    val dayTimestamp = System.currentTimeMillis()
+                    myDayRepository.saveOrUpdateDayEntity(
+                        date = scheduleDate,
+                        score = 4.5,
+                        note = "",
+                        aiFeedback = "",
+                        lastUpdated = dayTimestamp
+                    )
+                    Log.d("Schedule", "Created empty day entry for date $scheduleDate to allow schedule saving")
+                    
+                    // Также отправляем в Firestore, если пользователь авторизован
+                    val uid = auth.currentUser?.uid
+                    if (uid != null) {
+                        val dayEntity = MyDayEntity(
+                            date = scheduleDate,
+                            score = 4.5,
+                            note = "",
+                            lastUpdated = dayTimestamp,
+                            aiFeedback = ""
+                        )
+                        sendToFirestore(dayEntity, uid)
+                    }
+                }
+
                 val timestamp = System.currentTimeMillis()
                 val entity = ScheduleEntity(
                     id = id,
@@ -113,7 +142,7 @@ class MyDayViewModel @Inject constructor(
                 }
 
             } catch (e: Exception) {
-                Log.e("Firestore", "Save failed: ${e.message}")
+                Log.e("Firestore", "Save failed: ${e.message}", e)
                 _saveResult.value = Result.failure(e)
             }
         }
@@ -182,8 +211,28 @@ class MyDayViewModel @Inject constructor(
         }
     }
 
-    fun deleteScheduleItem(id: String, date: String){
-        scheduleRepository.deleteItem(id, date)
+    fun deleteScheduleItem(id: String, date: LocalDate) {
+        viewModelScope.launch {
+            try {
+                scheduleRepository.deleteItem(id, date)
+                // Также удаляем из Firestore, если пользователь авторизован
+                val uid = auth.currentUser?.uid
+                if (uid != null) {
+                    fstore
+                        .collection("users")
+                        .document(uid)
+                        .collection("days")
+                        .document(date.toString())
+                        .collection("schedule")
+                        .document(id)
+                        .delete()
+                        .await()
+                    Log.d("Firestore", "Deleted from Firestore: $id")
+                }
+            } catch (e: Exception) {
+                Log.e("Firestore", "Delete failed: ${e.message}")
+            }
+        }
     }
 
     //Firebase
@@ -258,37 +307,41 @@ class MyDayViewModel @Inject constructor(
     }
 
     // Синхронизация локальных данных с облаком при входе в аккаунт
-    fun syncLocalDataToCloud() {
-        viewModelScope.launch {
-            try {
-                // Получаем все локальные записи
-                val localEntries = myDayRepository.getAllLocalEntries()
-
-                // Сохраняем в облако с сохранением исходного lastUpdated
-                for (entry in localEntries) {
-                    val entity = MyDayEntity(
-                        date = entry.date,
-                        score = entry.score,
-                        note = entry.note,
-                        lastUpdated = entry.lastUpdated,
-                        aiFeedback = entry.aiFeedback
-                    )
-                    val uid = auth.currentUser?.uid
-                    myDayRepository.saveOrUpdateDayEntity(
-                        date = entity.date,
-                        score = entity.score,
-                        note = entity.note,
-                        aiFeedback = entity.aiFeedback,
-                        lastUpdated = entity.lastUpdated
-                    )
-                    if (uid != null) sendToFirestore(entity, uid)
-                    //для расписания тоже нужно сделать
-                }
-
-                Log.d("Sync", "Local to cloud sync completed")
-            } catch (e: Exception) {
-                Log.e("Sync", "Sync failed: ${e.message}")
+    suspend fun syncLocalDataToCloud() {
+        try {
+            val uid = auth.currentUser?.uid
+            if (uid == null) {
+                Log.w("Sync", "User not authenticated, skipping sync")
+                return
             }
+
+            // Синхронизация заметок (MyDayEntity)
+            val localEntries = myDayRepository.getAllLocalEntries()
+            Log.d("Sync", "Syncing ${localEntries.size} day entries")
+            
+            for (entry in localEntries) {
+                val entity = MyDayEntity(
+                    date = entry.date,
+                    score = entry.score,
+                    note = entry.note,
+                    lastUpdated = entry.lastUpdated,
+                    aiFeedback = entry.aiFeedback
+                )
+                sendToFirestore(entity, uid)
+            }
+
+            // Синхронизация расписания (ScheduleEntity)
+            val localSchedules = scheduleRepository.getAllLocalSchedules()
+            Log.d("Sync", "Syncing ${localSchedules.size} schedule entries")
+            
+            for (schedule in localSchedules) {
+                sendScheduleToFirestore(schedule, uid)
+            }
+
+            Log.d("Sync", "Local to cloud sync completed: ${localEntries.size} entries, ${localSchedules.size} schedules")
+        } catch (e: Exception) {
+            Log.e("Sync", "Sync failed: ${e.message}", e)
+            throw e
         }
     }
 }

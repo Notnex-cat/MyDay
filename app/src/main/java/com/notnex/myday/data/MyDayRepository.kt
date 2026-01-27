@@ -16,14 +16,19 @@ class MyDayRepository @Inject constructor(val dao: MyDayDAO) {
     ) {
         val existing = dao.getEntryOnce(date)
 
-        val updated = when {
-            existing == null -> MyDayEntity(date, score, note, lastUpdated, aiFeedback)
-            existing.score != score || existing.note != note || existing.aiFeedback != aiFeedback ->
-                existing.copy(score = score, note = note, lastUpdated = lastUpdated, aiFeedback = aiFeedback)
-            else -> return // ничего не изменилось — выходим
+        if (existing == null) {
+            // Создаем новую запись
+            val newEntity = MyDayEntity(date, score, note, lastUpdated, aiFeedback)
+            dao.insertOfDay(newEntity)
+        } else {
+            // Обновляем существующую запись, чтобы не срабатывал CASCADE
+            val updated = existing.copy(score = score, note = note, lastUpdated = lastUpdated, aiFeedback = aiFeedback)
+            // Проверяем, действительно ли что-то изменилось
+            if (updated != existing) {
+                dao.update(updated)
+            }
+            // Если ничего не изменилось, просто выходим
         }
-
-        dao.insertOfDay(updated)
     }
 
     suspend fun getAllLocalEntries(): List<MyDayEntity> = dao.getFullEntry()

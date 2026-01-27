@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,7 +58,12 @@ fun EditScheduleScreen(
                     )
                 },
                 actions = {
-                IconButton(onClick = { myDayViewModel.deleteScheduleItem(id, date) })
+                    IconButton(onClick = { 
+                        myDayViewModel.deleteScheduleItem(id, date)
+                        navController.popBackStack()
+                    }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                    }
                 },
                 navigationIcon = { // кнопка сендвич для бокового меню
                     IconButton(onClick = {

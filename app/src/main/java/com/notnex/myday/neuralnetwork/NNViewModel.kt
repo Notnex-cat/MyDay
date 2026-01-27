@@ -22,6 +22,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONObject
+import java.time.LocalDate
 import java.io.IOException
 import javax.inject.Inject
 
@@ -40,12 +41,12 @@ class NNViewModel @Inject constructor(
     private val endpoint = "https://api.mistral.ai/v1/chat/completions"
     private val mediaType = "application/json".toMediaType()
 
-    fun requestSchedule(userInput: String) {
+    fun requestSchedule(userInput: String, date: LocalDate) {
         viewModelScope.launch {
             _scheduleState.value = NNResult.Loading
             try {
                 val scheduleList = withContext(Dispatchers.IO) {
-                    getScheduleResponse(userInput)
+                    getScheduleResponse(userInput, date)
                 }
                 _scheduleState.value = NNResult.Success(scheduleList)
             } catch (e: Exception) {
@@ -70,7 +71,7 @@ class NNViewModel @Inject constructor(
         }
     }
 
-    fun getScheduleResponse(userInput: String): List<ScheduleItem> {
+    fun getScheduleResponse(userInput: String, date: LocalDate): List<ScheduleItem> {
         val prompt = buildPrompt(PromptType.Schedule, userInput)
         val request = buildRequest(prompt, false)
 
@@ -90,7 +91,26 @@ class NNViewModel @Inject constructor(
             .removeSuffix("```")
             .trim()
 
-        return Json.Default.decodeFromString(cleanedJson)
+        // Десериализуем ответ от нейросети (только time и task)
+        val responseItems: List<ScheduleItemResponse> = Json.Default.decodeFromString(cleanedJson)
+        
+        // Преобразуем в ScheduleItem, добавляя id и date
+        // ID генерируется из даты + времени для уникальности и правильной сортировки
+        // Формат: YYYYMMDD_HHMM (например: 20260111_0730)
+        // Это обеспечивает:
+        // 1. Уникальность в рамках даты (дата + время)
+        // 2. Правильную сортировку по времени (лексикографически, так как формат YYYYMMDD_HHMM)
+        // 3. Отсутствие наложений (если время совпадает, ID будет одинаковым и произойдет замена через OnConflictStrategy.REPLACE)
+        val dateStr = date.toString().replace("-", "")
+        return responseItems.map { item ->
+            val timeStr = item.time.replace(":", "")
+            ScheduleItem(
+                id = "${dateStr}_${timeStr}",
+                date = date.toString(),
+                time = item.time,
+                task = item.task
+            )
+        }
     }
 
     fun getResponse(userInput: String, onStreamUpdate: (String) -> Unit) {

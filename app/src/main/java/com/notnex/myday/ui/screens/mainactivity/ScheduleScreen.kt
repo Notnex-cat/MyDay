@@ -3,21 +3,28 @@ package com.notnex.myday.ui.screens.mainactivity
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -56,7 +63,7 @@ fun ScheduleScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
-                onClick = { nnViewModel.requestSchedule(userInput) },
+                onClick = { nnViewModel.requestSchedule(userInput, date) },
                 //enabled = userInput.isNotBlank()
             ) {
                 Text("Получить расписание")
@@ -68,36 +75,65 @@ fun ScheduleScreen(
                 is NNResult.Idle -> Text("")
                 is NNResult.Loading -> CircularProgressIndicator()
                 is NNResult.Success -> {
-                    val schedule = (state as NNResult.Success<List<ScheduleItem>>).data
+                    val initialSchedule = (state as NNResult.Success<List<ScheduleItem>>).data
+                    val editableSchedule = remember { mutableStateListOf<ScheduleItem>() }
+                    
+                    // Обновляем список при изменении состояния
+                    LaunchedEffect(initialSchedule) {
+                        editableSchedule.clear()
+                        editableSchedule.addAll(initialSchedule)
+                    }
+                    
                     LazyColumn {
-                        items(schedule) { item ->
+                        items(
+                            items = editableSchedule,
+                            key = { it.id }
+                        ) { item ->
                             Card(
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(4.dp)
-                                    .clickable {
-                                        navController.navigate(ScreenEditSchedule(
-                                            id = item.id,
-                                            date = item.date,
-                                            time = item.time,
-                                            item = item.task,
-                                        ))
-                                    }
                             ) {
-                                Text(
-                                    "${item.time} — ${item.task}",
-                                    modifier = Modifier.padding(14.dp)
-                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            navController.navigate(ScreenEditSchedule(
+                                                id = item.id,
+                                                date = item.date,
+                                                time = item.time,
+                                                item = item.task,
+                                            ))
+                                        }
+                                ) {
+                                    Text(
+                                        "${item.time} — ${item.task}",
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(14.dp)
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            editableSchedule.remove(item)
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Удалить",
+                                            modifier = Modifier.padding(8.dp)
+                                        )
+                                    }
+                                }
                             }
-
                         }
                         item {
                             Button(onClick = {
-                                schedule.forEach { item ->
+                                editableSchedule.forEach { item ->
                                     val itemString = "${item.time} — ${item.task}"
-                                    viewModel.saveDaySchedule(item.time.replace(":", ""),date, itemString, "", 4.5, "")
+                                    // Используем ID из ScheduleItem (формат: YYYYMMDD_HHMM для правильной сортировки)
+                                    viewModel.saveDaySchedule(item.id, date, itemString, "", 4.5, "")
                                 }
-                                Toast.makeText(context, "Сохранено ${schedule.size} элементов", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Сохранено ${editableSchedule.size} элементов", Toast.LENGTH_SHORT).show()
                             }) {
                                 Text("Save")
                             }

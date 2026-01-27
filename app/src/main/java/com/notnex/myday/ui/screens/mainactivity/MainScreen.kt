@@ -306,27 +306,28 @@ fun SharedTransitionScope.MainScreen(
                         }
 
                         val fullSchedule by myDayViewModel.getSchedule(selectedDate)
-                            .collectAsState(initial = null)
-
-                        val currentFullDBScheduleState = rememberUpdatedState(fullSchedule) //это прям объект всей БД
-
-                        val schedule = currentFullDBScheduleState.value
+                            .collectAsState(initial = emptyList())
 
                         LazyColumn {
                             items(
-                                items = schedule ?: emptyList(),
-                                key = { item -> item.hashCode() }
+                                items = fullSchedule,
+                                key = { item -> item.id }
                             ) { item ->
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(4.dp)
                                         .clickable {
-                                            navController.navigate(ScreenEditSchedule(item = item.scheduleItem))
+                                            navController.navigate(ScreenEditSchedule(
+                                                id = item.id,
+                                                date = item.scheduleDate.toString(),
+                                                time = "",
+                                                item = item.scheduleItem
+                                            ))
                                         }
                                 ) {
                                     Text(
-                                        text = "${item.id} - ${item.scheduleItem}",
+                                        text = item.scheduleItem,
                                         modifier = Modifier.padding(14.dp)
                                     )
                                 }

@@ -13,9 +13,11 @@ interface MyScheduleDAO {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertScheduleItem(item: ScheduleEntity)
 
-    @Query("SELECT * FROM schedule_entries WHERE scheduleDate = :date")
+    @Query("SELECT * FROM schedule_entries WHERE scheduleDate = :date ORDER BY id")
     fun getDayWithSchedules(date: LocalDate): Flow<List<ScheduleEntity>>
 
+    @Query("SELECT * FROM schedule_entries")
+    suspend fun getAllSchedules(): List<ScheduleEntity>
 
     @Query("DELETE FROM schedule_entries WHERE id = :id")
     suspend fun deleteById(id: String)
