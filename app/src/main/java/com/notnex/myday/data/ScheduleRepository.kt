@@ -2,6 +2,7 @@ package com.notnex.myday.data
 
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
+import java.time.LocalTime
 import javax.inject.Inject
 
 
@@ -11,6 +12,7 @@ class ScheduleRepository @Inject constructor(val dao: MyScheduleDAO) {
     suspend fun saveOrUpdateScheduleEntity(
         id: String,
         date: LocalDate,
+        time: LocalTime,
         item: String,
         score: Double,
         note: String,
@@ -21,6 +23,7 @@ class ScheduleRepository @Inject constructor(val dao: MyScheduleDAO) {
         val entity = ScheduleEntity(
             id = id,
             scheduleDate = date,
+            time = time,
             scheduleItem = item,
             score = score,
             note = note,

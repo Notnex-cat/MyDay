@@ -101,7 +101,7 @@ fun ScheduleScreen(
                                             navController.navigate(ScreenEditSchedule(
                                                 id = item.id,
                                                 date = item.date,
-                                                time = item.time,
+                                                time = item.time.toString(),
                                                 item = item.task,
                                             ))
                                         }
@@ -129,9 +129,8 @@ fun ScheduleScreen(
                         item {
                             Button(onClick = {
                                 editableSchedule.forEach { item ->
-                                    val itemString = "${item.time} — ${item.task}"
                                     // Используем ID из ScheduleItem (формат: YYYYMMDD_HHMM для правильной сортировки)
-                                    viewModel.saveDaySchedule(item.id, date, itemString, "", 4.5, "")
+                                    viewModel.saveDaySchedule(id = item.id, scheduleDate = date, scheduleTime = item.time, scheduleItem = item.task, note = "", score = 4.5, aiFeedback = "")
                                 }
                                 Toast.makeText(context, "Сохранено ${editableSchedule.size} элементов", Toast.LENGTH_SHORT).show()
                             }) {

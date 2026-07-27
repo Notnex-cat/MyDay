@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlin.String
 
@@ -81,7 +83,7 @@ class MyDayViewModel @Inject constructor(
         }
     }
 
-    fun saveDaySchedule(id: String, scheduleDate: LocalDate, scheduleItem: String, note: String, score: Double, aiFeedback: String) {
+    fun saveDaySchedule(id: String, scheduleDate: LocalDate, scheduleTime: LocalTime, scheduleItem: String, note: String, score: Double, aiFeedback: String) {
         viewModelScope.launch {
             try {
                 // Проверяем, существует ли запись дня для этой даты
@@ -117,6 +119,7 @@ class MyDayViewModel @Inject constructor(
                 val entity = ScheduleEntity(
                     id = id,
                     scheduleDate = scheduleDate,
+                    time = scheduleTime,
                     scheduleItem = scheduleItem,
                     score = score,
                     note = note,
@@ -126,6 +129,7 @@ class MyDayViewModel @Inject constructor(
                 scheduleRepository.saveOrUpdateScheduleEntity(
                     id = id,
                     date = scheduleDate,
+                    time = scheduleTime,
                     item = scheduleItem,
                     score = score,
                     note = note,
@@ -181,6 +185,7 @@ class MyDayViewModel @Inject constructor(
         // Подготавливаем DTO
         val dto = MyScheduleFirebaseDTO(
             id = entity.id,
+            time = entity.time.format(DateTimeFormatter.ofPattern("HH:mm")),
             scheduleItem = entity.scheduleItem,
             score = entity.score,
             note = entity.note,
@@ -194,8 +199,7 @@ class MyDayViewModel @Inject constructor(
             .collection("days")
             .document(entity.scheduleDate.toString())
             .collection("schedule")
-            .document(entity.id.toString())
-        print("11")
+            .document(entity.id)
 
 
         // Загружаем текущее облачное состояние (если есть)

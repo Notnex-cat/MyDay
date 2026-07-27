@@ -25,7 +25,7 @@ object DatabaseModule {
             appContext,
             MyDayDataBase::class.java,
             "day_entries.db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides

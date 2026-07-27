@@ -6,6 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.time.LocalDate
+import java.time.LocalTime
 
 @Entity(
     tableName = "schedule_entries",
@@ -23,6 +24,7 @@ import java.time.LocalDate
 data class ScheduleEntity(
     @PrimaryKey val id: String, // PK каждой записи
     val scheduleDate: LocalDate,                       // внешний ключ
+    val time: LocalTime,
     val scheduleItem: String,                          // название пункта (подъём, завтрак)
     val note: String,                                  // комментарий
     val score: Double,                                    // оценка (например, насколько хорошо выполнил)
@@ -33,6 +35,7 @@ data class ScheduleEntity(
 @Immutable
 data class MyScheduleFirebaseDTO(
     val id: String = "",                                        // внешний ключ
+    val time: String = "",
     val scheduleItem: String = "",                          // название пункта (подъём, завтрак)
     val note: String  = "",                                  // комментарий
     val score: Double = 0.0,                                    // оценка (например, насколько хорошо выполнил)

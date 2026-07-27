@@ -24,6 +24,7 @@ import okhttp3.Response
 import org.json.JSONObject
 import java.time.LocalDate
 import java.io.IOException
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @HiltViewModel
@@ -102,8 +103,9 @@ class NNViewModel @Inject constructor(
         // 2. Правильную сортировку по времени (лексикографически, так как формат YYYYMMDD_HHMM)
         // 3. Отсутствие наложений (если время совпадает, ID будет одинаковым и произойдет замена через OnConflictStrategy.REPLACE)
         val dateStr = date.toString().replace("-", "")
+        val formatter = DateTimeFormatter.ofPattern("HHmm")
         return responseItems.map { item ->
-            val timeStr = item.time.replace(":", "")
+            val timeStr = item.time.format(formatter)
             ScheduleItem(
                 id = "${dateStr}_${timeStr}",
                 date = date.toString(),
