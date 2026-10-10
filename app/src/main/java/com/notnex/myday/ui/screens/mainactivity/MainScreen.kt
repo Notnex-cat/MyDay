@@ -1,7 +1,6 @@
 package com.notnex.myday.ui.screens.mainactivity
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -40,20 +39,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,12 +59,16 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthViewModel
+import com.notnex.myday.data.NOT_RATED
+import com.notnex.myday.data.TIME_FORMAT
+import com.notnex.myday.data.isRated
 import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
-import com.notnex.myday.ui.ScreenEditSchedule
-import com.notnex.myday.ui.Settings
+import com.notnex.myday.ui.navigation.EditScheduleRoute
+import com.notnex.myday.ui.navigation.PracticeRoute
+import com.notnex.myday.ui.navigation.SettingsRoute
+import com.notnex.myday.ui.navigation.toDayNoteRoute
 import com.notnex.myday.ui.theme.RatingBar
 import com.notnex.myday.viewmodel.MyDayViewModel
-import com.notnex.myday.viewmodel.Screen
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -85,7 +84,6 @@ fun SharedTransitionScope.MainScreen(
     myDayViewModel: MyDayViewModel = hiltViewModel()
 ) {
 
-    val context = LocalContext.current
     val authViewModel: AuthViewModel = hiltViewModel()
     val weekOffsets = rememberPagerState(5, 0f) { 10 }
 
@@ -99,20 +97,21 @@ fun SharedTransitionScope.MainScreen(
 
     val state by authViewModel.authState.collectAsState()
 
-    // Управляем подпиской на облачные обновления в зависимости от аутентификации
-    LaunchedEffect(state.isAuthenticated) {
-        if (state.isAuthenticated) {
-            myDayViewModel.subscribeToUserRealtimeUpdates()
-        } else {
-            myDayViewModel.stopUserRealtimeUpdates()
-        }
-    }
-    
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        SideMenu(drawerState)// боковое меню в другом файле
+        SideMenu(
+            drawerState = drawerState,
+            onOpenSettings = {
+                scope.launch { drawerState.close() }
+                navController.navigate(SettingsRoute)
+            },
+            onOpenPractice = {
+                scope.launch { drawerState.close() }
+                navController.navigate(PracticeRoute)
+            }
+        ) // боковое меню в другом файле
         {
             Scaffold(
                 topBar = {
@@ -136,22 +135,18 @@ fun SharedTransitionScope.MainScreen(
                                     }
                                 }
                             }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu")
+                                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu))
                             }
                         },
                         actions = { // кнопка аккаунт
-                            IconButton(onClick = {
-                                val intent = Intent(context, Settings::class.java)
-                                context.startActivity(intent)
-                                //navController.navigate(Screen.SettingScreen.route)
-                            }) {
+                            IconButton(onClick = { navController.navigate(SettingsRoute) }) {
                                 val avatarUrl = state.user?.profilePictureUrl
 
                                 if (avatarUrl != null) {
                                     key(avatarUrl) { // Добавляем key для пересоздания при смене URL
                                         AsyncImage(
                                             model = avatarUrl, // Упрощаем без ImageRequest.Builder
-                                            contentDescription = "Profile picture",
+                                            contentDescription = stringResource(R.string.profile_picture),
                                             modifier = Modifier
                                                 .size(30.dp)
                                                 .clip(CircleShape),
@@ -161,7 +156,7 @@ fun SharedTransitionScope.MainScreen(
                                 } else {
                                     Icon(
                                         imageVector = Icons.Outlined.AccountCircle,
-                                        contentDescription = "Default profile icon",
+                                        contentDescription = stringResource(R.string.profile_picture),
                                         modifier = Modifier.size(30.dp)
                                     )
                                 }
@@ -170,18 +165,9 @@ fun SharedTransitionScope.MainScreen(
                     )
                 },
                 floatingActionButton = { //кнопка снизу
-
-                    val isInExpandableScreen =
-                        remember { mutableStateOf(true) } // Или derive от NavController
-
                     CustomFloatingActionButton(
                         navController = navController,
                         selectedDate = selectedDate,
-                        expandable = isInExpandableScreen.value,
-                        onFabClick = {
-                            //Toast.makeText(context, "open", Toast.LENGTH_SHORT).show()
-                            // или логика открытия экрана создания события
-                        },
                         fabIcon = Icons.Default.Add
                     )
                 }
@@ -235,15 +221,11 @@ fun SharedTransitionScope.MainScreen(
                         }
                     }
 
-                    val fullDB by myDayViewModel.getScore(selectedDate)
+                    val day by remember(selectedDate) { myDayViewModel.observeDay(selectedDate) }
                         .collectAsState(initial = null)
 
-                    val currentRating = fullDB?.score ?: 4.5
-
-                    val text = fullDB?.note ?: ""
-
-                    val currentDateState = rememberUpdatedState(selectedDate)
-                    val currentfullDBState = rememberUpdatedState(fullDB) //это прям объект всей БД
+                    val currentRating = day?.score ?: NOT_RATED
+                    val text = day?.note ?: ""
 
                     Column {
                         ElevatedCard( // текст о дне
@@ -264,7 +246,7 @@ fun SharedTransitionScope.MainScreen(
                                     animatedVisibilityScope = animatedVisibilityScope
                                 )
                                 .clickable {
-                                    navController.navigate("${Screen.DayNote.route}/${selectedDate}")
+                                    navController.navigate(selectedDate.toDayNoteRoute())
                                 }
 
                         ) {
@@ -286,18 +268,10 @@ fun SharedTransitionScope.MainScreen(
                                     .size(50.dp),
                                 rating = currentRating,
                                 onRatingChanged = { newRating ->
-                                    val date = currentDateState.value
-                                    val noteText = currentfullDBState.value?.note.orEmpty()
-                                    val aiResponseText =
-                                        currentfullDBState.value?.aiFeedback.orEmpty()
-                                    myDayViewModel.saveDayEntry(
-                                        date,
-                                        newRating,
-                                        noteText,
-                                        aiResponseText
-                                    )
+                                    myDayViewModel.setRating(selectedDate, newRating)
                                 },
                                 starsColor = when {
+                                    !currentRating.isRated -> MaterialTheme.colorScheme.outline
                                     currentRating >= 4.0 -> Color.Green
                                     currentRating >= 2.5 -> colorResource(R.color.orange)
                                     else -> Color.Red
@@ -305,7 +279,7 @@ fun SharedTransitionScope.MainScreen(
                             )
                         }
 
-                        val fullSchedule by myDayViewModel.getSchedule(selectedDate)
+                        val fullSchedule by remember(selectedDate) { myDayViewModel.observeSchedule(selectedDate) }
                             .collectAsState(initial = emptyList())
 
                         LazyColumn {
@@ -318,16 +292,11 @@ fun SharedTransitionScope.MainScreen(
                                         .fillMaxWidth()
                                         .padding(4.dp)
                                         .clickable {
-                                            navController.navigate(ScreenEditSchedule(
-                                                id = item.id,
-                                                date = item.scheduleDate.toString(),
-                                                time = "",
-                                                item = item.scheduleItem
-                                            ))
+                                            navController.navigate(EditScheduleRoute(item.id))
                                         }
                                 ) {
                                     Text(
-                                        text = item.scheduleItem,
+                                        text = "${item.time.format(TIME_FORMAT)} — ${item.scheduleItem}",
                                         modifier = Modifier.padding(14.dp)
                                     )
                                 }
@@ -339,4 +308,3 @@ fun SharedTransitionScope.MainScreen(
         }
     }
 }
-

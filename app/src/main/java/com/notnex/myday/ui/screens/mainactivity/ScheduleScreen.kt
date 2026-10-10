@@ -1,7 +1,5 @@
 package com.notnex.myday.ui.screens.mainactivity
 
-import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,26 +15,26 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.notnex.myday.R
+import com.notnex.myday.data.TIME_FORMAT
 import com.notnex.myday.neuralnetwork.NNResult
 import com.notnex.myday.neuralnetwork.NNViewModel
-import com.notnex.myday.neuralnetwork.ScheduleItem
-import com.notnex.myday.ui.ScreenEditSchedule
 import com.notnex.myday.viewmodel.MyDayViewModel
 import java.time.LocalDate
 
@@ -50,13 +48,16 @@ fun ScheduleScreen(
     var userInput by remember { mutableStateOf("") }
     val state by nnViewModel.scheduleState.collectAsState()
 
-    val context = LocalContext.current
     Scaffold { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
+        ) {
             OutlinedTextField(
                 value = userInput,
                 onValueChange = { userInput = it },
-                label = { Text("Опиши свой день") },
+                label = { Text(stringResource(R.string.describe_your_day)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -64,84 +65,60 @@ fun ScheduleScreen(
 
             Button(
                 onClick = { nnViewModel.requestSchedule(userInput, date) },
-                //enabled = userInput.isNotBlank()
+                enabled = userInput.isNotBlank() && state !is NNResult.Loading
             ) {
-                Text("Получить расписание")
+                Text(stringResource(R.string.get_schedule))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            when (state) {
-                is NNResult.Idle -> Text("")
+            when (val current = state) {
+                is NNResult.Idle -> Unit
                 is NNResult.Loading -> CircularProgressIndicator()
                 is NNResult.Success -> {
-                    val initialSchedule = (state as NNResult.Success<List<ScheduleItem>>).data
-                    val editableSchedule = remember { mutableStateListOf<ScheduleItem>() }
-                    
-                    // Обновляем список при изменении состояния
-                    LaunchedEffect(initialSchedule) {
-                        editableSchedule.clear()
-                        editableSchedule.addAll(initialSchedule)
-                    }
-                    
+                    // Черновик, который можно прорядить перед сохранением
+                    val draft = remember(current.data) { current.data.toMutableStateList() }
+
                     LazyColumn {
-                        items(
-                            items = editableSchedule,
-                            key = { it.id }
-                        ) { item ->
+                        items(items = draft, key = { it.id }) { item ->
                             Card(
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(4.dp)
+                                    .padding(vertical = 4.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            navController.navigate(ScreenEditSchedule(
-                                                id = item.id,
-                                                date = item.date,
-                                                time = item.time.toString(),
-                                                item = item.task,
-                                            ))
-                                        }
-                                ) {
+                                Row(modifier = Modifier.fillMaxWidth()) {
                                     Text(
-                                        "${item.time} — ${item.task}",
+                                        "${item.time.format(TIME_FORMAT)} — ${item.task}",
                                         modifier = Modifier
                                             .weight(1f)
                                             .padding(14.dp)
                                     )
-                                    IconButton(
-                                        onClick = {
-                                            editableSchedule.remove(item)
-                                        }
-                                    ) {
+                                    IconButton(onClick = { draft.remove(item) }) {
                                         Icon(
                                             Icons.Default.Delete,
-                                            contentDescription = "Удалить",
-                                            modifier = Modifier.padding(8.dp)
+                                            contentDescription = stringResource(R.string.delete)
                                         )
                                     }
                                 }
                             }
                         }
                         item {
-                            Button(onClick = {
-                                editableSchedule.forEach { item ->
-                                    // Используем ID из ScheduleItem (формат: YYYYMMDD_HHMM для правильной сортировки)
-                                    viewModel.saveDaySchedule(id = item.id, scheduleDate = date, scheduleTime = item.time, scheduleItem = item.task, note = "", score = 4.5, aiFeedback = "")
+                            Button(
+                                enabled = draft.isNotEmpty(),
+                                onClick = {
+                                    viewModel.addScheduleItems(date, draft.toList())
+                                    navController.popBackStack()
                                 }
-                                Toast.makeText(context, "Сохранено ${editableSchedule.size} элементов", Toast.LENGTH_SHORT).show()
-                            }) {
-                                Text("Save")
+                            ) {
+                                Text(stringResource(R.string.save))
                             }
                         }
                     }
                 }
-                is NNResult.Error -> {
-                    Text("Ошибка: ${(state as NNResult.Error).exception.message}")
-                }
+                is NNResult.Error -> Text(
+                    text = stringResource(R.string.error_with_message, current.exception.message.orEmpty()),
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         }
     }

@@ -1,7 +1,6 @@
 package com.notnex.myday.ui.screens.settingsactivity
 
 import android.app.Activity
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -50,14 +49,11 @@ import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthViewModel
-import com.notnex.myday.viewmodel.MyDayViewModel
-import com.notnex.myday.viewmodel.Screen
 
 @Composable
 fun AuthScreen(
     navController: NavController,
-    authViewModel: AuthViewModel = hiltViewModel(),
-    myDayViewModel: MyDayViewModel = hiltViewModel()
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val authState by authViewModel.authState.collectAsState()
     val emailState = remember { mutableStateOf("") }
@@ -78,21 +74,9 @@ fun AuthScreen(
         }
     )
 
+    // Синхронизацией занимается SyncManager по факту входа — экрану остаётся только вернуться назад
     LaunchedEffect(authState.isAuthenticated) {
-        if (authState.isAuthenticated) {
-            // Синхронизируем данные перед навигацией
-            try {
-                myDayViewModel.syncLocalDataToCloud()
-            } catch (e: Exception) {
-                // Логируем ошибку, но продолжаем навигацию
-                Log.e("AuthScreen", "Sync failed: ${e.message}", e)
-            }
-            // Навигация после синхронизации
-            navController.navigate(Screen.SettingScreen.route) {
-                popUpTo(Screen.SettingScreen.route) { inclusive = true }
-                launchSingleTop = true
-            }
-        }
+        if (authState.isAuthenticated) navController.popBackStack()
     }
 
     Scaffold { innerPadding ->
@@ -194,7 +178,7 @@ fun AuthScreen(
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.google_icon_logo), // добавь иконку
-                        contentDescription = "Google Sign-In",
+                        contentDescription = stringResource(R.string.sign_in_with_google),
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))

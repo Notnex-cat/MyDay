@@ -1,31 +1,29 @@
 package com.notnex.myday.data
 
 import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
 @Dao
 interface MyDayDAO {
     @Query("SELECT * FROM day_entries")
-    suspend fun getFullEntry(): List<MyDayEntity>
+    suspend fun getAll(): List<MyDayEntity>
 
     @Query("SELECT * FROM day_entries WHERE date = :date LIMIT 1")
-    fun getEntry(date: LocalDate): Flow<MyDayEntity?>
+    fun observe(date: LocalDate): Flow<MyDayEntity?>
 
     @Query("SELECT * FROM day_entries WHERE date = :date LIMIT 1")
-    suspend fun getEntryOnce(date: LocalDate): MyDayEntity?
+    suspend fun getOnce(date: LocalDate): MyDayEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOfDay(entry: MyDayEntity)
+    // @Upsert обновляет строку на месте. INSERT OR REPLACE удалил бы строку дня
+    // и через ForeignKey.CASCADE снёс бы всё его расписание.
+    @Upsert
+    suspend fun upsert(entry: MyDayEntity)
 
-    @Update
-    suspend fun update(entry: MyDayEntity)
 
-    @Delete
-    suspend fun delete(entry: MyDayEntity)
+
+    @Query("SELECT * FROM day_entries WHERE note != '' ORDER BY date DESC")
+    fun observeNotes(): Flow<List<MyDayEntity>>
 }

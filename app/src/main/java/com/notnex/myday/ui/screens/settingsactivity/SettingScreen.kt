@@ -1,7 +1,5 @@
 package com.notnex.myday.ui.screens.settingsactivity
 
-import android.annotation.SuppressLint
-import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -49,17 +47,16 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthState
-import com.notnex.myday.viewmodel.Screen
+import com.notnex.myday.ui.navigation.AuthRoute
 
 @OptIn(ExperimentalMaterial3Api::class)
-@SuppressLint("ContextCastToActivity", "SuspiciousIndentation")
 @Composable
 fun SettingsScreen(
     state: AuthState,
     onSignOut: () -> Unit,
     navController: NavController
 ){
-    val context = LocalContext.current as? Activity
+    val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(key1 = state.error) {
@@ -80,13 +77,10 @@ fun SettingsScreen(
                 ),
                 title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        context?.finish()
-                        }
-                    ) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.back)
                         )
                     }
                 }
@@ -107,7 +101,7 @@ fun SettingsScreen(
                     .padding(16.dp)
                     .clickable {
                         if (state.user == null) {
-                            navController.navigate(Screen.Auth.route)
+                            navController.navigate(AuthRoute)
                         }
                     }
             ) {
@@ -118,7 +112,7 @@ fun SettingsScreen(
                         state.user.profilePictureUrl?.let { url ->
                             AsyncImage(
                                 model = url,
-                                contentDescription = "Profile picture",
+                                contentDescription = stringResource(R.string.profile_picture),
                                 modifier = Modifier
                                     .size(80.dp)
                                     .padding(16.dp)
@@ -148,7 +142,7 @@ fun SettingsScreen(
 
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
                             IconButton(onClick = { showMenu = !showMenu }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Меню")
+                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.menu))
                             }
 
                             DropdownMenu(
@@ -168,7 +162,7 @@ fun SettingsScreen(
                     }
                 } else {
                     Text(
-                        text = "Sign in",
+                        text = stringResource(R.string.sign_in),
                         textAlign = TextAlign.Center,
                         fontSize = 36.sp,
                         fontWeight = FontWeight.SemiBold

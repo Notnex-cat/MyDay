@@ -11,28 +11,38 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavType
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import androidx.navigation.toRoute
+import com.notnex.myday.auth.AuthViewModel
+import com.notnex.myday.ui.navigation.AuthRoute
+import com.notnex.myday.ui.navigation.DayNoteRoute
+import com.notnex.myday.ui.navigation.EditScheduleRoute
+import com.notnex.myday.ui.navigation.MainRoute
+import com.notnex.myday.ui.navigation.PracticeRoute
+import com.notnex.myday.ui.navigation.ScheduleRoute
+import com.notnex.myday.ui.navigation.SettingsRoute
+import com.notnex.myday.ui.navigation.toLocalDateOrToday
+import com.notnex.myday.ui.screens.PracticeScreen
 import com.notnex.myday.ui.screens.mainactivity.DayNote
 import com.notnex.myday.ui.screens.mainactivity.EditScheduleScreen
 import com.notnex.myday.ui.screens.mainactivity.MainScreen
 import com.notnex.myday.ui.screens.mainactivity.ScheduleScreen
+import com.notnex.myday.ui.screens.settingsactivity.AuthScreen
+import com.notnex.myday.ui.screens.settingsactivity.SettingsScreen
 import com.notnex.myday.ui.theme.MyDayTheme
-import com.notnex.myday.viewmodel.Screen
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.serialization.Serializable
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 const val CARD_EXPLODE_BOUNDS_KEY = "CARD_EXPLODE_BOUNDS_KEY"
 
 @AndroidEntryPoint
-class MainActivity: ComponentActivity() {
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -42,83 +52,57 @@ class MainActivity: ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE // или другой формат
                     val navController = rememberNavController()
                     SharedTransitionLayout {
                         NavHost(
                             navController = navController,
-                            startDestination = Screen.MainScreen.route
+                            startDestination = MainRoute
                         ) {
-                            composable(
-                                route = Screen.MainScreen.route
-                            ) {
+                            composable<MainRoute> {
                                 MainScreen(
                                     navController = navController,
-                                    animatedVisibilityScope = this,
-                                )
-                            }
-                            composable(
-                                route = Screen.DayNote.route + "/{date}",
-                                arguments = listOf(
-                                    navArgument("date") {
-                                        type = NavType.StringType
-                                        nullable = false
-                                    },
-                                )
-                            ) { entry ->
-                                val dateString = entry.arguments?.getString("date")
-                                val date = try {
-                                    LocalDate.parse(requireNotNull(dateString), dateFormatter)
-                                } catch (_: Exception) {
-                                    LocalDate.now()
-                                }
-                                DayNote(
-                                    navController = navController,
-                                    date = date,
-                                    //currentRating = currentRating,
-                                    //note = note,
                                     animatedVisibilityScope = this
                                 )
                             }
-                            composable(
-                                route = Screen.ScheduleScreen.route + "/{date}",
-                                arguments = listOf(
-                                    navArgument("date") {
-                                        type = NavType.StringType
-                                        nullable = false
-                                    },
+                            composable<DayNoteRoute> { entry ->
+                                DayNote(
+                                    navController = navController,
+                                    date = entry.toRoute<DayNoteRoute>().date.toLocalDateOrToday(),
+                                    animatedVisibilityScope = this
                                 )
-                            )
-                            { entry ->
-                                val dateString = entry.arguments?.getString("date")
-                                val date = try {
-                                    LocalDate.parse(requireNotNull(dateString), dateFormatter)
-                                } catch (_: Exception) {
-                                    LocalDate.now()
-                                }
+                            }
+                            composable<ScheduleRoute> { entry ->
                                 ScheduleScreen(
                                     navController = navController,
-                                    date = date,
-                                    //currentRating = currentRating,
-                                    //note = note,
+                                    date = entry.toRoute<ScheduleRoute>().date.toLocalDateOrToday()
                                 )
                             }
-
-                            composable<ScreenEditSchedule> { backStackEntry ->
-                                val args = backStackEntry.toRoute<ScreenEditSchedule>()
-                                val date = try {
-                                    LocalDate.parse(args.date, dateFormatter)
-                                } catch (_: Exception) {
-                                    LocalDate.now()
-                                }
+                            composable<EditScheduleRoute> { entry ->
                                 EditScheduleScreen(
                                     navController = navController,
-                                    id = args.id,
-                                    date = date,
-                                    item = args.item
+                                    id = entry.toRoute<EditScheduleRoute>().id
                                 )
                             }
-
+                            composable<SettingsRoute> {
+                                val authViewModel: AuthViewModel = hiltViewModel()
+                                val authState by authViewModel.authState.collectAsState()
+                                // key пересоздаёт экран при смене пользователя, сбрасывая его локальное состояние
+                                key(authState.user?.userId) {
+                                    SettingsScreen(
+                                        state = authState,
+                                        onSignOut = authViewModel::signOut,
+                                        navController = navController
+                                    )
+                                }
+                            }
+                            composable<PracticeRoute> {
+                                PracticeScreen(
+                                    navController = navController
+                                )
+                            }
+                            composable<AuthRoute> {
+                                AuthScreen(navController = navController)
+                            }
                         }
                     }
                 }
@@ -126,14 +110,3 @@ class MainActivity: ComponentActivity() {
         }
     }
 }
-
-@Serializable
-object ScreenSchedule
-
-@Serializable
-data class ScreenEditSchedule(
-    val id: String,
-    val item: String,
-    val date: String,
-    val time: String
-)

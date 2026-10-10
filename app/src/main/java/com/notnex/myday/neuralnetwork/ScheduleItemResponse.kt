@@ -4,6 +4,7 @@ import com.notnex.myday.data.LocalTimeSerializer
 import kotlinx.serialization.Serializable
 import java.time.LocalTime
 
+/** Элемент JSON-массива, который возвращает нейросеть. */
 @Serializable
 data class ScheduleItemResponse(
     @Serializable(with = LocalTimeSerializer::class)

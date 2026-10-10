@@ -1,5 +1,5 @@
 [versions]
-agp = "9.3.1"
+agp = "9.4.1"
 animation = "1.8.3"
 coilCompose = "2.7.0"
 firebaseAuthKtx = "23.2.1"
@@ -57,5 +57,6 @@ play-services-auth = { module = "com.google.android.gms:play-services-auth", ver
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hiltAndroidCompiler" }
 google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "googleGmsGoogleServices" }

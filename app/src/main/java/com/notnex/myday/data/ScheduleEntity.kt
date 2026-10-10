@@ -20,25 +20,14 @@ import java.time.LocalTime
     ],
     indices = [Index(value = ["scheduleDate"])]
 )
-
+@Immutable
 data class ScheduleEntity(
-    @PrimaryKey val id: String, // PK каждой записи
-    val scheduleDate: LocalDate,                       // внешний ключ
+    @PrimaryKey val id: String,
+    val scheduleDate: LocalDate,                       // внешний ключ на день
     val time: LocalTime,
     val scheduleItem: String,                          // название пункта (подъём, завтрак)
-    val note: String,                                  // комментарий
-    val score: Double,                                    // оценка (например, насколько хорошо выполнил)
+    val note: String = "",                             // комментарий
+    val score: Double = NOT_RATED,                     // оценка выполнения
     val lastUpdated: Long = System.currentTimeMillis(),
-    val aiFeedback: String
-)
-
-@Immutable
-data class MyScheduleFirebaseDTO(
-    val id: String = "",                                        // внешний ключ
-    val time: String = "",
-    val scheduleItem: String = "",                          // название пункта (подъём, завтрак)
-    val note: String  = "",                                  // комментарий
-    val score: Double = 0.0,                                    // оценка (например, насколько хорошо выполнил)
-    val lastUpdated: Long = 0L,
     val aiFeedback: String = ""
 )

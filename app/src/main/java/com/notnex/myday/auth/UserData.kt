@@ -1,9 +1,4 @@
-package com.notnex.myday.firebase
-
-data class SignInResult(
-    val data: UserData?,
-    val errorMessage: String?
-)
+package com.notnex.myday.auth
 
 data class UserData(
     val userId: String,

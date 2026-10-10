@@ -32,9 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.notnex.myday.viewmodel.Screen
+import com.notnex.myday.R
+import com.notnex.myday.ui.navigation.toScheduleRoute
 import java.time.LocalDate
 
 
@@ -42,14 +44,9 @@ import java.time.LocalDate
 fun CustomFloatingActionButton(
     navController: NavController,
     selectedDate: LocalDate,
-    expandable: Boolean,
-    onFabClick: () -> Unit,
     fabIcon: ImageVector
 ) {
     var isExpanded by remember { mutableStateOf(false) }
-    if (!expandable) {
-        isExpanded = false
-    }
 
     val fabSize = 64.dp
     val expandedFabWidth by animateDpAsState(
@@ -77,30 +74,26 @@ fun CustomFloatingActionButton(
                     .padding(vertical = 12.dp)
             ) {
                 TextButton(onClick = {
-                    navController.navigate("${Screen.ScheduleScreen.route}/${selectedDate}")
+                    isExpanded = false
+                    navController.navigate(selectedDate.toScheduleRoute())
                 }
                 ) {
                     Icon(Icons.AutoMirrored.Default.MenuOpen, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Создать расписание")
+                    Text(stringResource(R.string.create_schedule))
                 }
 
                 TextButton(onClick = { /* TODO: Handle New Reminder */ }) {
                     Icon(Icons.Default.Alarm, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Новое напоминание")
+                    Text(stringResource(R.string.new_reminder))
                 }
             }
         }
 
         // FAB itself
         FloatingActionButton(
-            onClick = {
-                onFabClick()
-                if (expandable) {
-                    isExpanded = !isExpanded
-                }
-            },
+            onClick = { isExpanded = !isExpanded },
             modifier = Modifier
                 .width(expandedFabWidth)
                 .height(expandedFabHeight),
@@ -115,7 +108,7 @@ fun CustomFloatingActionButton(
             )
 
             Text(
-                text = "Create Reminder",
+                text = stringResource(R.string.create_reminder),
                 softWrap = false,
                 modifier = Modifier
                     .offset(x = animateDpAsState(if (isExpanded) 10.dp else 50.dp, animationSpec = spring(dampingRatio = 3f)).value)

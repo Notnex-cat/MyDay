@@ -19,3 +19,7 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Firestore маппит документы в DTO через рефлексию по именам полей — R8 не должен их переименовывать.
+-keep class com.notnex.myday.data.remote.MyDayFirebaseDTO { *; }
+-keep class com.notnex.myday.data.remote.MyScheduleFirebaseDTO { *; }

@@ -3,184 +3,73 @@ package com.notnex.myday.neuralnetwork
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.notnex.myday.BuildConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
-import org.json.JSONObject
 import java.time.LocalDate
-import java.io.IOException
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @HiltViewModel
 class NNViewModel @Inject constructor(
-    private val client: OkHttpClient
+    private val mistral: MistralRepository
 ) : ViewModel() {
+
     private val _scheduleState = MutableStateFlow<NNResult<List<ScheduleItem>>>(NNResult.Idle)
-    val scheduleState: StateFlow<NNResult<List<ScheduleItem>>> = _scheduleState
+    val scheduleState: StateFlow<NNResult<List<ScheduleItem>>> = _scheduleState.asStateFlow()
 
-    private val _responseState = MutableStateFlow<NNResult<Unit>>(NNResult.Idle)
-    val responseState: StateFlow<NNResult<Unit>> = _responseState
+    private val _feedbackState = MutableStateFlow<NNResult<Unit>>(NNResult.Idle)
+    val feedbackState: StateFlow<NNResult<Unit>> = _feedbackState.asStateFlow()
 
-    val apiKey = BuildConfig.NN_API_KEY
-    private val model = "mistral-small-latest"
-    private val endpoint = "https://api.mistral.ai/v1/chat/completions"
-    private val mediaType = "application/json".toMediaType()
+    /** Текст ответа, накапливаемый по мере стриминга. */
+    private val _feedbackText = MutableStateFlow("")
+    val feedbackText: StateFlow<String> = _feedbackText.asStateFlow()
+
+    private var scheduleJob: Job? = null
+    private var feedbackJob: Job? = null
 
     fun requestSchedule(userInput: String, date: LocalDate) {
-        viewModelScope.launch {
+        scheduleJob?.cancel()
+        scheduleJob = viewModelScope.launch {
             _scheduleState.value = NNResult.Loading
-            try {
-                val scheduleList = withContext(Dispatchers.IO) {
-                    getScheduleResponse(userInput, date)
-                }
-                _scheduleState.value = NNResult.Success(scheduleList)
+            _scheduleState.value = try {
+                NNResult.Success(mistral.generateSchedule(userInput, date))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _scheduleState.value = NNResult.Error(e)
-                Log.e("ScheduleVM", "Error: $e")
+                Log.e(TAG, "Schedule request failed", e)
+                NNResult.Error(e)
             }
         }
     }
 
-    fun requestFromDayNote(userInput: String, onStreamUpdate: (String) -> Unit) {
-        viewModelScope.launch {
-            _responseState.value = NNResult.Loading
-            try {
-                val nnrequest = withContext(Dispatchers.IO) {
-                    getResponse(userInput, onStreamUpdate) // возвращает String
-                }
-                _responseState.value = NNResult.Success(nnrequest)
-            } catch (e: Exception) {
-                _responseState.value = NNResult.Error(e)
-                Log.e("ScheduleVM", "Error: $e")
+    /** @param onComplete вызывается один раз с полным текстом, когда стрим успешно завершился. */
+    fun requestFeedback(note: String, onComplete: (String) -> Unit) {
+        feedbackJob?.cancel()
+        feedbackJob = viewModelScope.launch {
+            _feedbackText.value = ""
+            _feedbackState.value = NNResult.Loading
+            var failure: Throwable? = null
+            mistral.streamFeedback(note)
+                .catch { failure = it }
+                .collect { chunk -> _feedbackText.value += chunk }
+
+            val error = failure
+            if (error != null) {
+                Log.e(TAG, "Feedback request failed", error)
+                _feedbackState.value = NNResult.Error(error)
+            } else {
+                _feedbackState.value = NNResult.Success(Unit)
+                onComplete(_feedbackText.value)
             }
         }
     }
 
-    fun getScheduleResponse(userInput: String, date: LocalDate): List<ScheduleItem> {
-        val prompt = buildPrompt(PromptType.Schedule, userInput)
-        val request = buildRequest(prompt, false)
-
-        val response = client.newCall(request).execute()
-        if (!response.isSuccessful) throw Exception("HTTP ${response.code}")
-
-        val bodyString = response.body.string()
-        response.close()
-        val jsonObject = Json.Default.parseToJsonElement(bodyString).jsonObject
-        val choices = jsonObject["choices"]?.jsonArray ?: throw Exception("Missing choices")
-        val message = choices[0].jsonObject["message"]?.jsonObject ?: throw Exception("Missing message")
-        val content = message["content"]?.jsonPrimitive?.content ?: throw Exception("Missing content")
-
-        val cleanedJson = content
-            .removePrefix("```json")
-            .removePrefix("```")
-            .removeSuffix("```")
-            .trim()
-
-        // Десериализуем ответ от нейросети (только time и task)
-        val responseItems: List<ScheduleItemResponse> = Json.Default.decodeFromString(cleanedJson)
-        
-        // Преобразуем в ScheduleItem, добавляя id и date
-        // ID генерируется из даты + времени для уникальности и правильной сортировки
-        // Формат: YYYYMMDD_HHMM (например: 20260111_0730)
-        // Это обеспечивает:
-        // 1. Уникальность в рамках даты (дата + время)
-        // 2. Правильную сортировку по времени (лексикографически, так как формат YYYYMMDD_HHMM)
-        // 3. Отсутствие наложений (если время совпадает, ID будет одинаковым и произойдет замена через OnConflictStrategy.REPLACE)
-        val dateStr = date.toString().replace("-", "")
-        val formatter = DateTimeFormatter.ofPattern("HHmm")
-        return responseItems.map { item ->
-            val timeStr = item.time.format(formatter)
-            ScheduleItem(
-                id = "${dateStr}_${timeStr}",
-                date = date.toString(),
-                time = item.time,
-                task = item.task
-            )
-        }
-    }
-
-    fun getResponse(userInput: String, onStreamUpdate: (String) -> Unit) {
-        val content = userInput.replace(Regex("\\s+"), " ").trim()
-        val prompt = buildPrompt(PromptType.NoteFeedback, content)
-        val request = buildRequest(prompt, true)
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("HTTP", "Ошибка запроса: ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                try {
-                    val body = response.body ?: return
-                    val source = body.source()
-                    while (!source.exhausted()) {
-                        val line = source.readUtf8Line() ?: break
-                        if (line.startsWith("data: ")) {
-                            val json = line.removePrefix("data: ").trim()
-                            if (json == "[DONE]") break
-                            val content = JSONObject(json)
-                                .getJSONArray("choices")
-                                .getJSONObject(0)
-                                .getJSONObject("delta")
-                                .optString("content", "")
-                            if (content.isNotEmpty()) {
-                                onStreamUpdate(content)
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("HTTP", "Ошибка чтения стрима: ${e.message}")
-                } finally {
-                    response.close()
-                }
-            }
-        })
-    }
-
-    private fun buildRequest(content: String, stream: Boolean): Request {
-        val body = """
-        {
-          "model": "$model",
-          "messages": [
-            {
-              "role": "user",
-              "content": "$content"
-            }
-          ],
-          "stream": $stream
-        }
-    """.trimIndent()
-
-        return Request.Builder()
-            .url(endpoint)
-            .post(body.toRequestBody(mediaType))
-            .addHeader("Authorization", "Bearer $apiKey")
-            .apply {
-                if (stream) addHeader("Accept", "text/event-stream")
-            }
-            .build()
-    }
-
-    private fun buildPrompt(task: PromptType, input: String): String = when (task) {
-        PromptType.Schedule -> "Ты — ассистент по составлению расписания дня. Пользователь сказал: $input Сформируй подробное расписание на основе этого, в формате JSON-массива с объектами: - time: время в формате \\\"HH:mm\\\" - task: описание задачи Пример ответа:[ {\\\"time\\\": \\\"07:30\\\", \\\"task\\\": \\\"Подъем и зарядка\\\"}, {\\\"time\\\": \\\"08:00\\\", \\\"task\\\": \\\"Завтрак\\\"}, {\\\"time\\\": \\\"09:00\\\", \\\"task\\\": \\\"Работа над проектом\\\"} ] Возвращай ТОЛЬКО JSON — никаких пояснений и комментариев."
-        PromptType.NoteFeedback -> "ты персональный ассистент по саморазвитию. Отвечай на языке на котором задан вопрос: ${input.replace(Regex("\\s+"), " ").trim()}"
+    private companion object {
+        const val TAG = "NNViewModel"
     }
 }
-
-enum class PromptType { Schedule, NoteFeedback }

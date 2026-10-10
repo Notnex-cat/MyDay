@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "firebase@anthropic-plugin-directory": true
+  }
+}

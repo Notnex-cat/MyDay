@@ -6,15 +6,16 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android)
     id("kotlin-kapt")
-    alias(libs.plugins.google.gms.google.services) // добавляем kapt
-    kotlin("plugin.serialization") version "2.2.0"
+    alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.kotlin.serialization)
 }
 
-//protect api key
+// Ключ нейросети лежит в local.properties (он в .gitignore). Без него сборка не падает,
+// просто запросы к нейросети будут возвращать 401.
 val localProperties = Properties().apply {
-    load(rootProject.file("local.properties").inputStream())
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
-val nnApiKey = localProperties["nn_key"] as String
+val nnApiKey: String = localProperties.getProperty("nn_key", "")
 
 android {
     namespace = "com.notnex.myday"
@@ -42,6 +43,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -56,6 +58,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs = listOf("-XXLanguage:+PropertyParamAnnotationDefaultTargetMode")
     }
 
     buildFeatures {

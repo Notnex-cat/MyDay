@@ -3,11 +3,13 @@ package com.notnex.myday.auth
 import android.content.Intent
 import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
-import com.notnex.myday.firebase.UserData
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.tasks.await
 
 data class AuthState(
@@ -21,87 +23,71 @@ class AuthRepository(
     private val oneTapClient: SignInClient
 ) {
     private val auth = Firebase.auth
-    private val _authState = MutableStateFlow(AuthState())
+    private val _authState = MutableStateFlow(stateFor(auth.currentUser))
     val authState: StateFlow<AuthState> = _authState
 
+    val currentUserId: String? get() = auth.currentUser?.uid
+
     init {
-        val user = getCurrentUser()
-        if (user != null) {
-            _authState.value = AuthState(isAuthenticated = true, user = user)
+        // Единственный источник правды о том, кто вошёл: и вход, и выход (в том числе
+        // сделанный не через этот класс) приходят сюда.
+        auth.addAuthStateListener { firebaseAuth ->
+            _authState.update {
+                it.copy(
+                    isAuthenticated = firebaseAuth.currentUser != null,
+                    user = firebaseAuth.currentUser?.toUserData()
+                )
+            }
         }
     }
 
-    fun getCurrentUser(): UserData? = auth.currentUser?.let {
-        UserData(
-            userId = it.uid,
-            username = it.displayName ?: it.email?.substringBefore("@"),
-            profilePictureUrl = it.photoUrl?.toString(),
-            email = it.email
-        )
+    suspend fun signInWithEmail(email: String, password: String) = authenticate {
+        auth.signInWithEmailAndPassword(email, password).await()
     }
 
-    suspend fun signInWithEmail(email: String, password: String) {
-        _authState.value = _authState.value.copy(isLoading = true, error = null)
-        try {
-            auth.signInWithEmailAndPassword(email, password).await()
-            auth.currentUser?.reload()?.await()
-            _authState.value = AuthState(
-                isAuthenticated = true,
-                user = getCurrentUser()
-            )
-        } catch (e: Exception) {
-            _authState.value = AuthState(error = e.message)
-        }
+    suspend fun signUpWithEmail(email: String, password: String) = authenticate {
+        auth.createUserWithEmailAndPassword(email, password).await()
     }
 
-    suspend fun signUpWithEmail(email: String, password: String) {
-        _authState.value = _authState.value.copy(isLoading = true, error = null)
-        try {
-            auth.createUserWithEmailAndPassword(email, password).await()
-            auth.currentUser?.reload()?.await()
-            _authState.value = AuthState(
-                isAuthenticated = true,
-                user = getCurrentUser()
-            )
-        } catch (e: Exception) {
-            _authState.value = AuthState(error = e.message)
-        }
-    }
-
-    suspend fun signInWithGoogle(intent: Intent) {
-        _authState.value = _authState.value.copy(isLoading = true, error = null)
-        try {
-            val credential = oneTapClient.getSignInCredentialFromIntent(intent)
-            val googleIdToken = credential.googleIdToken
-            val googleCredentials = GoogleAuthProvider.getCredential(googleIdToken, null)
-            auth.signInWithCredential(googleCredentials).await()
-            // Обновим данные пользователя, чтобы появились displayName/photoUrl
-            auth.currentUser?.reload()?.await()
-            val firebaseUser = auth.currentUser
-            val userData = UserData(
-                userId = firebaseUser?.uid ?: credential.id,
-                username = firebaseUser?.displayName
-                    ?: credential.displayName
-                    ?: firebaseUser?.email?.substringBefore("@"),
-                profilePictureUrl = firebaseUser?.photoUrl?.toString()
-                    ?: credential.profilePictureUri?.toString(),
-                email = firebaseUser?.email
-            )
-            _authState.value = AuthState(
-                isAuthenticated = true,
-                user = userData
-            )
-        } catch (e: Exception) {
-            _authState.value = AuthState(error = e.message)
-        }
+    suspend fun signInWithGoogle(intent: Intent) = authenticate {
+        val credential = oneTapClient.getSignInCredentialFromIntent(intent)
+        val googleCredentials = GoogleAuthProvider.getCredential(credential.googleIdToken, null)
+        auth.signInWithCredential(googleCredentials).await()
     }
 
     fun signOut() {
         auth.signOut()
-        _authState.value = AuthState()
+        _authState.update { it.copy(error = null) }
     }
 
     fun clearError() {
-        _authState.value = _authState.value.copy(error = null)
+        _authState.update { it.copy(error = null) }
     }
+
+    private suspend fun authenticate(block: suspend () -> Unit) {
+        _authState.update { it.copy(isLoading = true, error = null) }
+        try {
+            block()
+            // Подтянем displayName/photoUrl, которых может не быть сразу после входа
+            auth.currentUser?.reload()?.await()
+            _authState.update { it.copy(isLoading = false, user = auth.currentUser?.toUserData()) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Неудачная попытка входа не должна «разлогинивать» уже вошедшего пользователя
+            _authState.update { it.copy(isLoading = false, error = e.message) }
+        }
+    }
+
+    private fun stateFor(user: FirebaseUser?) = AuthState(
+        isAuthenticated = user != null,
+        user = user?.toUserData()
+    )
+
+    private fun FirebaseUser.toUserData() = UserData(
+        userId = uid,
+        username = displayName ?: email?.substringBefore("@"),
+        profilePictureUrl = photoUrl?.toString(),
+        email = email
+    )
 }

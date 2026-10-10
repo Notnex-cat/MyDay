@@ -30,7 +30,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,9 +45,7 @@ import com.notnex.myday.neuralnetwork.NNResult
 import com.notnex.myday.neuralnetwork.NNViewModel
 import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
 import com.notnex.myday.viewmodel.MyDayViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -59,26 +56,25 @@ fun SharedTransitionScope.DayNote(
     nnViewModel: NNViewModel = hiltViewModel(),
     date: LocalDate,
     animatedVisibilityScope: AnimatedVisibilityScope,
-){
-    val coroutineScope = rememberCoroutineScope()
+) {
+    val day by remember(date) { viewModel.observeDay(date) }.collectAsState(initial = null)
 
-    var saveJob by remember { mutableStateOf<Job?>(null) }
+    var noteText by remember { mutableStateOf("") }
 
-    val fullDB by viewModel.getScore(date).collectAsState(initial = null)
+    // Текст подставляем один раз при открытии: дальше источник правды — поле ввода,
+    // иначе каждое автосохранение перезаписывало бы то, что пользователь печатает.
+    LaunchedEffect(date) {
+        noteText = viewModel.observeDay(date).first()?.note.orEmpty()
+    }
 
-    val currentRating = fullDB?.score ?: 4.5
+    val feedbackState by nnViewModel.feedbackState.collectAsState()
+    val streamedFeedback by nnViewModel.feedbackText.collectAsState()
+    val isLoading = feedbackState is NNResult.Loading
 
-    var localtext by remember { mutableStateOf("") }
-
-    var aiResponse by remember { mutableStateOf("") }
-
-    val state by nnViewModel.responseState.collectAsState()
-
-    LaunchedEffect(fullDB) {
-        if (fullDB != null && localtext.isEmpty()) {
-            localtext = fullDB!!.note
-        }
-        aiResponse = fullDB?.aiFeedback ?: ""
+    // Пока идёт (или только что закончился) запрос — показываем стрим, иначе сохранённый ответ
+    val feedback = when (feedbackState) {
+        is NNResult.Loading, is NNResult.Success -> streamedFeedback
+        else -> day?.aiFeedback.orEmpty()
     }
 
     Scaffold(
@@ -93,12 +89,15 @@ fun SharedTransitionScope.DayNote(
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent //MaterialTheme.colorScheme.background
+                    containerColor = Color.Transparent
                 ),
-                title = { Text("Опишите свой день") },
+                title = { Text(stringResource(R.string.describe_your_day_title)) },
                 navigationIcon = {
-                    IconButton(onClick = {navController.popBackStack()}) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
                     }
                 }
             )
@@ -108,23 +107,18 @@ fun SharedTransitionScope.DayNote(
             modifier = Modifier
                 .padding(innerPadding)
                 .imePadding()
-                //.background(Color.Red)
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
             TextField(
-                value = localtext,
+                value = noteText,
                 minLines = 5,
                 maxLines = 10,
                 placeholder = { Text(stringResource(R.string.write_something)) },
                 onValueChange = {
-                    localtext = it
-                    saveJob?.cancel() // отменяем предыдущую задачу
-                    saveJob = coroutineScope.launch {
-                        delay(1500) // 1500 мс после последнего ввода
-                        viewModel.saveDayEntry(date, currentRating, it, aiResponse)
-                    }
+                    noteText = it
+                    viewModel.onNoteChanged(date, it)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 textStyle = TextStyle(fontSize = 20.sp),
@@ -132,51 +126,47 @@ fun SharedTransitionScope.DayNote(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
                     disabledContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,  // Отключаем линию при фокусе
+                    focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 )
             )
 
             Button(
-                modifier = Modifier
-                    .padding(top = 16.dp),
+                modifier = Modifier.padding(top = 16.dp),
+                enabled = noteText.isNotBlank() && !isLoading,
                 onClick = {
-                    aiResponse = "" // обнуляем перед новым ответом
-                    nnViewModel.requestFromDayNote(
-                        userInput = localtext,
-                        onStreamUpdate = { chunk ->
-                            aiResponse += chunk
-                            saveJob?.cancel()
-                            saveJob = coroutineScope.launch {
-                                delay(1500)
-                                viewModel.saveDayEntry(date, currentRating, localtext, aiResponse)
-                            }
-                        }
-                    )
+                    nnViewModel.requestFeedback(noteText) { fullText ->
+                        viewModel.saveAiFeedback(date, fullText)
+                    }
                 }
             ) {
-                Text(text = "Спросить")
+                Text(text = stringResource(R.string.ask_ai))
             }
 
-            LazyColumn( // нужено чтобы ответ листался
+            LazyColumn( // нужно, чтобы длинный ответ листался
                 modifier = Modifier.fillMaxWidth()
             ) {
                 item {
-                    when (state) {
-                        is NNResult.Loading -> CircularProgressIndicator()
-                        is NNResult.Success, NNResult.Idle -> {
-                            Text(
-                                text = aiResponse,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth(),
-                            )
-                        }
-                        is NNResult.Error -> {
-                            Text("Ошибка: ${(state as NNResult.Error).exception.message}")
-                        }
+                    if (isLoading && streamedFeedback.isEmpty()) {
+                        CircularProgressIndicator(modifier = Modifier.padding(16.dp))
                     }
+                    if (feedbackState is NNResult.Error) {
+                        Text(
+                            text = stringResource(
+                                R.string.error_with_message,
+                                (feedbackState as NNResult.Error).exception.message.orEmpty()
+                            ),
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                    Text(
+                        text = feedback,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                    )
                 }
             }
         }

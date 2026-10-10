@@ -1,17 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings">Настройки</string>
+    <string name="practice">Практика</string>
     <string name="write_something">Напишите что-нибудь…</string>
-    <string name="delete_account">Удалить аккаунт</string>
     <string name="sign_in">Войти в аккаунт</string>
     <string name="sign_out">Выйти из аккаунта</string>
     <string name="sign_up">Зарегистрироваться</string>
-    <string name="about_app">О приложении</string>
-    <string name="sign_up_error">Ошибка регистрации</string>
-    <string name="email_or_password_is_empty">"Не хватает логина или пароля "</string>
     <string name="login">Логин</string>
     <string name="password">Пароль</string>
     <string name="log_in_error">Не хватает логина или пароля</string>
     <string name="sign_in_with_google">Войти с помощью Google</string>
-    <string name="edit">"Изменить: "</string>
+    <string name="menu">Меню</string>
+    <string name="profile_picture">Фото профиля</string>
+    <string name="back">Назад</string>
+    <string name="delete">Удалить</string>
+    <string name="save">Сохранить</string>
+    <string name="ok">ОК</string>
+    <string name="cancel">Отмена</string>
+    <string name="create_schedule">Создать расписание</string>
+    <string name="new_reminder">Новое напоминание</string>
+    <string name="create_reminder">Создать напоминание</string>
+    <string name="edit_schedule_item">Редактирование пункта</string>
+    <string name="schedule_item_title">Название</string>
+    <string name="schedule_item_time">Время: %1$s</string>
+    <string name="schedule_item_note">Заметка</string>
+    <string name="describe_your_day">Опиши свой день</string>
+    <string name="describe_your_day_title">Опишите свой день</string>
+    <string name="get_schedule">Получить расписание</string>
+    <string name="ask_ai">Спросить</string>
+    <string name="error_with_message">Ошибка: %1$s</string>
 </resources>
