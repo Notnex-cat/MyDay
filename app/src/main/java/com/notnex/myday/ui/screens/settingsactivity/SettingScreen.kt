@@ -1,6 +1,7 @@
 package com.notnex.myday.ui.screens.settingsactivity
 
 import android.widget.Toast
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,23 +50,28 @@ import coil.compose.AsyncImage
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthState
 import com.notnex.myday.ui.navigation.AuthRoute
+import com.notnex.myday.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     state: AuthState,
     onSignOut: () -> Unit,
-    navController: NavController
-){
+    navController: NavController,
+    settingsViewModel: SettingsViewModel
+) {
+
     val context = LocalContext.current
+    val activity = LocalActivity.current
     var showMenu by remember { mutableStateOf(false) }
+    val enabledReminder by settingsViewModel.reminderEnabled.collectAsState(false)
+    var showTimePicker by remember { mutableStateOf(false) }
+    val currentTime by settingsViewModel.reminderTime.collectAsState(null)
 
     LaunchedEffect(key1 = state.error) {
         state.error?.let { error ->
             Toast.makeText(
-                context,
-                error,
-                Toast.LENGTH_LONG
+                context, error, Toast.LENGTH_LONG
             ).show()
         }
     }
@@ -74,37 +81,31 @@ fun SettingsScreen(
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
-                ),
-                title = { Text(stringResource(R.string.settings)) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                ), title = { Text(stringResource(R.string.settings)) }, navigationIcon = {
+                    // экран стартовый в своей активити: popBackStack оставил бы пустое окно
+                    IconButton(onClick = { activity?.finish() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back)
                         )
                     }
-                }
-            )
+                })
         },
     ) { innerPadding ->
         Column(modifier = Modifier.Companion.padding(innerPadding)) {
             ElevatedCard(
                 elevation = CardDefaults.cardElevation(
                     defaultElevation = 8.dp
-                ),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
+                ), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.onTertiary
-                ),
-                modifier = Modifier.Companion
+                ), modifier = Modifier.Companion
                     .fillMaxWidth()
                     .padding(16.dp)
                     .clickable {
                         if (state.user == null) {
                             navController.navigate(AuthRoute)
                         }
-                    }
-            ) {
+                    }) {
                 if (state.user != null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
@@ -140,22 +141,24 @@ fun SettingsScreen(
                             }
                         }
 
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd
+                        ) {
                             IconButton(onClick = { showMenu = !showMenu }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.menu))
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = stringResource(R.string.menu)
+                                )
                             }
 
                             DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
+                                expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.sign_out)) },
                                     onClick = {
                                         onSignOut()
                                         showMenu = false
-                                    }
-                                )
+                                    })
                             }
                         }
 
@@ -168,6 +171,30 @@ fun SettingsScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
+            }
+
+            ReminderRow(
+                time = currentTime,
+                enabled = enabledReminder,
+                onClick = { showTimePicker = true },
+                onEnabledChange = { isOn ->
+                    if (isOn) {
+                        currentTime?.let { settingsViewModel.enableReminder(it) }
+                    } else {
+                        settingsViewModel.disableReminder()
+                    }
+                },
+            )
+
+            if (showTimePicker) {
+                ReminderTimeDialog(
+                    initialTime = currentTime,
+                    onConfirm = { time ->
+                        settingsViewModel.enableReminder(time)
+                        showTimePicker = false
+                    },
+                    onDismiss = { showTimePicker = false },
+                )
             }
         }
     }

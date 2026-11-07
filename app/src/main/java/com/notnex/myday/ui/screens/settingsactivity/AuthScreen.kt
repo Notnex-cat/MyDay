@@ -167,7 +167,7 @@ fun AuthScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 modifier = Modifier
                     .height(52.dp)

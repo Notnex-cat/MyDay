@@ -8,8 +8,7 @@ data class MyDayFirebaseDTO(
     val score: Double = 0.0,
     val note: String = "",
     val lastUpdated: Long = 0L,
-    val aiFeedback: String = "",
-    val mood: Int = 0
+    val aiFeedback: String = ""
 )
 
 data class MyScheduleFirebaseDTO(

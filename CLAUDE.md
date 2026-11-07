@@ -56,7 +56,7 @@ MyDay — Android-приложение (Kotlin, Jetpack Compose, один мод
 
 ### ViewModel и навигация
 
-- Один `NavHost` в `MainActivity`, маршруты — `@Serializable`-классы в `ui/navigation/Routes.kt`.
+- Две активити со своим `NavHost`: `MainActivity` (главный экран, заметка, расписание, практика) и `ui/Settings` (настройки и вход); `MainScreen` открывает настройки через `startActivity`. Маршруты — `@Serializable`-классы в `ui/navigation/Routes.kt`.
 - `hiltViewModel()` даёт каждому экрану свой экземпляр `MyDayViewModel`. Общего состояния между экранами через него нет: дата и id передаются аргументами маршрута, общие данные живут в репозитории-синглтоне.
 - Заметка сохраняется с задержкой 1,5 с после последнего символа, остаток дописывается в `onCleared` через `saveNoteInBackground`.
 

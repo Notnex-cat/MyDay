@@ -29,4 +29,6 @@
     <string name="get_schedule">Получить расписание</string>
     <string name="ask_ai">Спросить</string>
     <string name="error_with_message">Ошибка: %1$s</string>
+    <string name="notification_channel_name">Напоминание</string>
+    <string name="set_reminder">Установить напоминание</string>
 </resources>

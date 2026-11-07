@@ -89,6 +89,9 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     kapt(libs.androidx.room.compiler)
 
+    // настройки пользователя: ключ — значение
+    implementation(libs.androidx.datastore.preferences)
+
     // Hilt
     implementation(libs.hilt.android)
     kapt(libs.hilt.android.compiler)

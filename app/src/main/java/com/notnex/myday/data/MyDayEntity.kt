@@ -17,6 +17,5 @@ data class MyDayEntity(
     val score: Double = NOT_RATED,
     val note: String = "",
     val lastUpdated: Long = System.currentTimeMillis(),
-    val aiFeedback: String = "",
-    val mood: Int = 0
+    val aiFeedback: String = ""
 )

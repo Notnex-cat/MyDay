@@ -12,8 +12,7 @@ fun MyDayEntity.toDto() = MyDayFirebaseDTO(
     score = score,
     note = note,
     lastUpdated = lastUpdated,
-    aiFeedback = aiFeedback,
-    mood = mood
+    aiFeedback = aiFeedback
 )
 
 /** null, если документ в облаке повреждён (например, невалидная дата). */
@@ -23,8 +22,7 @@ fun MyDayFirebaseDTO.toEntityOrNull(): MyDayEntity? = try {
         score = score,
         note = note,
         lastUpdated = lastUpdated,
-        aiFeedback = aiFeedback,
-        mood = mood
+        aiFeedback = aiFeedback
     )
 } catch (_: DateTimeParseException) {
     null

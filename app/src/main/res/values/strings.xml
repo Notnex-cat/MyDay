@@ -30,4 +30,6 @@
     <string name="get_schedule">Get schedule</string>
     <string name="ask_ai">Ask</string>
     <string name="error_with_message">Error: %1$s</string>
+    <string name="notification_channel_name">Reminder</string>
+    <string name="set_reminder">Set reminder</string>
 </resources>

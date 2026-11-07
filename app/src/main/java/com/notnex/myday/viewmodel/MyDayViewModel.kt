@@ -7,6 +7,7 @@ import com.notnex.myday.data.MyDayEntity
 import com.notnex.myday.data.MyDayRepository
 import com.notnex.myday.data.ScheduleEntity
 import com.notnex.myday.neuralnetwork.ScheduleItem
+import com.notnex.myday.notification.ReminderScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -23,7 +24,8 @@ import kotlin.time.Duration.Companion.milliseconds
 @HiltViewModel
 class MyDayViewModel @Inject constructor(
     private val repository: MyDayRepository,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    private val reminderScheduler: ReminderScheduler
 ) : ViewModel() {
 
     private val _selectedDate = MutableStateFlow(

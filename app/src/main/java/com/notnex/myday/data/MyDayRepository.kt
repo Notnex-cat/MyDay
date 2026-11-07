@@ -47,9 +47,6 @@ class MyDayRepository @Inject constructor(
 
     fun observeDay(date: LocalDate): Flow<MyDayEntity?> = dayDao.observe(date)
 
-
-    fun observeNotes(): Flow<List<MyDayEntity>> = dayDao.observeNotes()
-
     fun observeSchedule(date: LocalDate): Flow<List<ScheduleEntity>> = scheduleDao.observeByDate(date)
 
     suspend fun getScheduleItem(id: String): ScheduleEntity? = scheduleDao.getById(id)
@@ -59,7 +56,6 @@ class MyDayRepository @Inject constructor(
     suspend fun saveNote(date: LocalDate, note: String) = updateDay(date) { copy(note = note) }
 
     suspend fun saveRating(date: LocalDate, score: Double) = updateDay(date) { copy(score = score) }
-    suspend fun saveMood(date: LocalDate, mood: Int) = updateDay(date) { copy(mood = mood) }
 
     suspend fun saveAiFeedback(date: LocalDate, feedback: String) =
         updateDay(date) { copy(aiFeedback = feedback) }

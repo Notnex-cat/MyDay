@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Тёмное окно до первого кадра Compose: иначе при запуске в тёмном режиме мелькает белый экран. -->
+    <style name="Theme.MyDay" parent="android:Theme.Material.NoActionBar" />
+</resources>

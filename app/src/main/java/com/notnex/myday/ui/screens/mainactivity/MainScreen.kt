@@ -1,6 +1,12 @@
 package com.notnex.myday.ui.screens.mainactivity
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -39,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -49,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,8 +72,8 @@ import com.notnex.myday.data.TIME_FORMAT
 import com.notnex.myday.data.isRated
 import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
 import com.notnex.myday.ui.navigation.EditScheduleRoute
+import com.notnex.myday.ui.Settings
 import com.notnex.myday.ui.navigation.PracticeRoute
-import com.notnex.myday.ui.navigation.SettingsRoute
 import com.notnex.myday.ui.navigation.toDayNoteRoute
 import com.notnex.myday.ui.theme.RatingBar
 import com.notnex.myday.viewmodel.MyDayViewModel
@@ -83,6 +91,23 @@ fun SharedTransitionScope.MainScreen(
     animatedVisibilityScope: AnimatedVisibilityScope,
     myDayViewModel: MyDayViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Permission granted, you can now send notifications.
+        } else {
+            Toast.makeText(context, "Notifications permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(Unit){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val authViewModel: AuthViewModel = hiltViewModel()
     val weekOffsets = rememberPagerState(5, 0f) { 10 }
@@ -105,7 +130,7 @@ fun SharedTransitionScope.MainScreen(
             drawerState = drawerState,
             onOpenSettings = {
                 scope.launch { drawerState.close() }
-                navController.navigate(SettingsRoute)
+                context.startActivity(Intent(context, Settings::class.java))
             },
             onOpenPractice = {
                 scope.launch { drawerState.close() }
@@ -139,7 +164,7 @@ fun SharedTransitionScope.MainScreen(
                             }
                         },
                         actions = { // кнопка аккаунт
-                            IconButton(onClick = { navController.navigate(SettingsRoute) }) {
+                            IconButton(onClick = { context.startActivity(Intent(context, Settings::class.java)) }) {
                                 val avatarUrl = state.user?.profilePictureUrl
 
                                 if (avatarUrl != null) {
@@ -208,13 +233,13 @@ fun SharedTransitionScope.MainScreen(
                                     Text(
                                         text = date.format(dayOfWeekFormatter),
                                         fontSize = 12.sp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary
                                     )
                                     Text(
                                         text = date.format(dayOfMonthFormatter),
                                         fontSize = 16.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary
                                     )
                                 }
                             }
