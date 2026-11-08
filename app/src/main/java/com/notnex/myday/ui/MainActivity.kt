@@ -15,7 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
+import com.notnex.myday.ui.navigation.DAY_DEEP_LINK
 import com.notnex.myday.ui.navigation.DayNoteRoute
 import com.notnex.myday.ui.navigation.EditScheduleRoute
 import com.notnex.myday.ui.navigation.MainRoute
@@ -53,7 +55,9 @@ class MainActivity : ComponentActivity() {
                                     animatedVisibilityScope = this
                                 )
                             }
-                            composable<DayNoteRoute> { entry ->
+                            composable<DayNoteRoute> (
+                                deepLinks = listOf(navDeepLink<DayNoteRoute>(basePath = DAY_DEEP_LINK))
+                            ) { entry ->
                                 DayNote(
                                     navController = navController,
                                     date = entry.toRoute<DayNoteRoute>().date.toLocalDateOrToday(),

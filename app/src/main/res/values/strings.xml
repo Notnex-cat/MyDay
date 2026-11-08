@@ -32,4 +32,9 @@
     <string name="error_with_message">Error: %1$s</string>
     <string name="notification_channel_name">Reminder</string>
     <string name="set_reminder">Set reminder</string>
+    <string name="how_day_gone">How was your day?</string>
+    <string name="tell_how_day_gone">Write a few words about your day</string>
+    <string name="day_score">Rate your day</string>
+    <string name="rate_the_day">Rate your day and write a few lines</string>
+    <string name="notification_channel_description">Daily reminder to write down how your day went</string>
 </resources>

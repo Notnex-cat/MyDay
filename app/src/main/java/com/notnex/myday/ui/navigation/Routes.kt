@@ -7,6 +7,8 @@ import java.time.format.DateTimeParseException
 @Serializable
 data object MainRoute
 
+
+const val DAY_DEEP_LINK = "myday://day"
 @Serializable
 data class DayNoteRoute(val date: String)
 

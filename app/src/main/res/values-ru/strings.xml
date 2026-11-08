@@ -31,4 +31,9 @@
     <string name="error_with_message">Ошибка: %1$s</string>
     <string name="notification_channel_name">Напоминание</string>
     <string name="set_reminder">Установить напоминание</string>
+    <string name="how_day_gone">Как прошёл день?</string>
+    <string name="tell_how_day_gone">Расскажите, как прошёл день</string>
+    <string name="day_score">Оцените день</string>
+    <string name="rate_the_day">Оцените день и запишите пару строк</string>
+    <string name="notification_channel_description">Ежедневное напоминание записать, как прошёл день</string>
 </resources>
