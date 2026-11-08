@@ -14,6 +14,10 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
+/**
+ * Срабатывает по будильнику, даже когда приложение закрыто. Создаёт его система конструктором
+ * без параметров, поэтому зависимости Hilt кладёт в поля, а не в конструктор.
+ */
 @AndroidEntryPoint
 class ReminderReceiver : BroadcastReceiver() {
     @Inject
@@ -28,11 +32,15 @@ class ReminderReceiver : BroadcastReceiver() {
 
 
     override fun onReceive(context: Context, intent: Intent) {
+        // onReceive должен вернуться быстро, а DataStore и Room читаются асинхронно.
+        // goAsync просит систему не убивать процесс, пока не вызван finish().
         val pending = goAsync()
+        // У будильника от версии до ReminderType типа нет — это было вечернее напоминание.
         val typeName = intent.getStringExtra("reminder_type")
         val type = ReminderType.entries.find { it.name == typeName} ?: ReminderType.DAY_NOTE
         appScope.launch {
             try {
+                // Сначала завтрашний будильник: если ниже что-то упадёт, цепочка не оборвётся.
                 reminderScheduler.scheduleFromSettings(type)
 
                 val message = when (type){

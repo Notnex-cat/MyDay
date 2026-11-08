@@ -11,6 +11,10 @@ import kotlinx.coroutines.launch
 import java.time.LocalTime
 import javax.inject.Inject
 
+/**
+ * Напоминания на экране настроек. Flow для каждого типа — свойства, а не функция reminderTime(type):
+ * функция, вызванная в теле composable, создавала бы новый Flow при каждой перерисовке.
+ */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
@@ -32,6 +36,8 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    // Флаг пишется раньше отмены: если будильник сработает в этот момент, приёмник
+    // уже увидит «выключено» и не поставит новый.
     fun disableReminder(type: ReminderType){
         viewModelScope.launch{
             repository.disableReminder( type)

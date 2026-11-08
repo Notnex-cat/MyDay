@@ -22,6 +22,11 @@ import androidx.compose.ui.unit.dp
 import com.notnex.myday.ui.theme.MyDayTheme
 import java.time.LocalTime
 
+/**
+ * Строка настроек напоминания. О ViewModel ничего не знает: данные приходят параметрами,
+ * нажатия уходят наружу лямбдами, решает экран. Полоса делит строку на две цели нажатия:
+ * текст открывает выбор времени, переключатель только включает и выключает.
+ */
 @Composable
 fun ReminderRow(
     time: LocalTime?,
@@ -45,11 +50,11 @@ fun ReminderRow(
         ) {
             Column(
                 Modifier
-                    .weight(1f)
-                    .clickable {
+                    .weight(1f)   // колонка забирает всё свободное место и прижимает переключатель вправо
+                    .clickable {  // нажимается только левая часть; padding после clickable, чтобы отступы тоже нажимались
                         onClick()
-                    }      // нажимается только левая часть
-                    .padding(MyDayTheme.spacing.md)) {       // weight здесь заменяет Spacer: колонка забирает всё свободное место
+                    }
+                    .padding(MyDayTheme.spacing.md)) {
                 Text(
                     stringResource(title),
                     style = MaterialTheme.typography.titleMedium
@@ -60,6 +65,7 @@ fun ReminderRow(
                     color = if (enabled) {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     } else {
+                        // 38 % — так в Material 3 выглядит неактивный элемент
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     },
                 )

@@ -56,6 +56,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable<DayNoteRoute> (
+                                // Поле date берётся из адреса; по ссылке NavHost сам откроет заметку поверх главного экрана
                                 deepLinks = listOf(navDeepLink<DayNoteRoute>(basePath = DAY_DEEP_LINK))
                             ) { entry ->
                                 DayNote(

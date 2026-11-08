@@ -66,6 +66,8 @@ fun SettingsScreen(
     val activity = LocalActivity.current
 
     var showMenu by remember { mutableStateOf(false) }
+    // Для какого напоминания открыто окно выбора времени; null — окно закрыто.
+    // Одна переменная вместо Boolean на каждое напоминание: «открыты два окна сразу» не записать.
     var timePickerType by remember { mutableStateOf<ReminderType?>(null) }
 
     val dayNoteEnabled by settingsViewModel.dayNoteEnabled.collectAsState(false)
@@ -186,6 +188,7 @@ fun SettingsScreen(
                 onClick = { timePickerType = ReminderType.DAY_NOTE },
                 onEnabledChange = { isOn ->
                     if (isOn) {
+                        // Переключатель возвращает прежнее время; пока DataStore не прочитан (null), ждём.
                         dayNoteTime?.let { settingsViewModel.enableReminder(it, ReminderType.DAY_NOTE) }
                     } else {
                         settingsViewModel.disableReminder(ReminderType.DAY_NOTE)

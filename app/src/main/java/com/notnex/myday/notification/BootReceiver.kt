@@ -10,6 +10,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Возвращает будильники, которые система стёрла при перезагрузке телефона или обновлении
+ * приложения. BOOT_COMPLETED приходит только после первой разблокировки: до неё данные
+ * приложения, включая DataStore, зашифрованы.
+ */
 @AndroidEntryPoint
 class BootReceiver: BroadcastReceiver() {
     @Inject lateinit var reminderScheduler: ReminderScheduler
@@ -17,6 +22,7 @@ class BootReceiver: BroadcastReceiver() {
     lateinit var appScope: CoroutineScope
 
     override fun onReceive(context: Context, intent: Intent) {
+        // Приёмник exported: напрямую его может вызвать любое приложение с любым действием.
         if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
             intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) {
             return

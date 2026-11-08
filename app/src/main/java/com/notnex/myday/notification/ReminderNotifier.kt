@@ -19,14 +19,14 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDate
 import javax.inject.Inject
 
+/** Показывает уведомление напоминания; что и когда показывать, решает ReminderReceiver. */
 class ReminderNotifier@Inject constructor(@ApplicationContext private val context: Context) {
     fun createNotificationChannel(){
-        // Create the NotificationChannel.
+        // Вызывается перед каждым показом: повторное создание безопасно и обновляет имя
+        // и описание канала. Важность после первого создания система уже не меняет.
         val importance = NotificationManager.IMPORTANCE_DEFAULT
         val mChannel = NotificationChannel("notification_channel_id", context.getString(R.string.notification_channel_name), importance)
         mChannel.description = context.getString(R.string.notification_channel_description)
-        // Register the channel with the system. You can't change the importance
-        // or other notification behaviors after this.
         val notificationManager =
             context.getSystemService(NotificationManager::class.java)
         notificationManager?.createNotificationChannel(mChannel)
@@ -36,8 +36,12 @@ class ReminderNotifier@Inject constructor(@ApplicationContext private val contex
     fun show(@StringRes message: Int, type: ReminderType) {
         createNotificationChannel()
 
+        // Нажатие открывает заметку дня по deep link. Дата — того дня, о котором напоминание:
+        // уведомление в 23:50, открытое после полуночи, должно вести во вчерашний день.
         val intent = Intent(Intent.ACTION_VIEW, "$DAY_DEEP_LINK/${LocalDate.now()}".toUri(), context, MainActivity::class.java)
 
+        // С этими флагами NavController строит стек «главный → заметка»: «Назад» ведёт
+        // на главный экран, а вторая копия MainActivity поверх первой не появляется.
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
@@ -53,6 +57,8 @@ class ReminderNotifier@Inject constructor(@ApplicationContext private val contex
             context, Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
 
+        // Номер уведомления — тип: новое напоминание того же типа заменяет вчерашнее,
+        // а разные типы друг друга не затирают.
         if (granted) {
             NotificationManagerCompat.from(context).notify(type.requestCode, notification)
         }

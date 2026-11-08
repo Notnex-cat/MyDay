@@ -9,6 +9,10 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import java.time.LocalTime
 
+/**
+ * Окно выбора времени. Вызывается внутри условия, поэтому состояние пикера создаётся заново
+ * при каждом открытии и берёт актуальное initialTime, а не то, что было при прошлом открытии.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReminderTimeDialog(

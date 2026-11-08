@@ -32,7 +32,9 @@
             </intent-filter>
         </activity>
 
+        <!-- Будильники напоминаний; вызывает только система через наш PendingIntent -->
         <receiver android:name=".notification.ReminderReceiver" android:exported="false" />
+        <!-- Возвращает будильники после перезагрузки и обновления; exported, потому что события шлёт система -->
         <receiver
             android:name=".notification.BootReceiver"
             android:exported="true">

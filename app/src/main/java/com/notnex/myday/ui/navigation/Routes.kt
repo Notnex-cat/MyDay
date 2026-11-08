@@ -8,7 +8,9 @@ import java.time.format.DateTimeParseException
 data object MainRoute
 
 
+/** Адрес заметки дня: myday://day/2026-11-08. Им пользуются NavHost и уведомление — константа одна, чтобы адреса не разошлись. */
 const val DAY_DEEP_LINK = "myday://day"
+
 @Serializable
 data class DayNoteRoute(val date: String)
 

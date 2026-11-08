@@ -23,6 +23,10 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 private fun minutesKey(type: ReminderType) = intPreferencesKey("${type.keyPrefix}_minutes")
 private fun enabledKey(type: ReminderType) = booleanPreferencesKey("${type.keyPrefix}_enabled")
 
+/**
+ * Настройки напоминаний. Отсюда их читают экран настроек, планировщик и оба приёмника:
+ * время напоминания хранится только здесь.
+ */
 @Singleton
 class SettingsRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -37,6 +41,7 @@ class SettingsRepository @Inject constructor(
         prefs[enabledKey(type)] ?: false
     }
 
+    // Выбор времени и есть включение: время и флаг записываются вместе, одним edit.
     suspend fun saveReminderTime(type: ReminderType, time: LocalTime) {
         context.dataStore.edit { prefs ->
             prefs[enabledKey(type)] = true
@@ -44,6 +49,7 @@ class SettingsRepository @Inject constructor(
         }
     }
 
+    // Время не стираем: включив напоминание снова, человек получит прежнее.
     suspend fun disableReminder(type: ReminderType){
         context.dataStore.edit { prefs ->
             prefs[enabledKey(type)] = false
