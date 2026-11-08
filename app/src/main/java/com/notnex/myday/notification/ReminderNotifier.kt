@@ -33,7 +33,7 @@ class ReminderNotifier@Inject constructor(@ApplicationContext private val contex
     }
 
 
-    fun show(@StringRes message: Int) {
+    fun show(@StringRes message: Int, type: ReminderType) {
         createNotificationChannel()
 
         val intent = Intent(Intent.ACTION_VIEW, "$DAY_DEEP_LINK/${LocalDate.now()}".toUri(), context, MainActivity::class.java)
@@ -54,7 +54,7 @@ class ReminderNotifier@Inject constructor(@ApplicationContext private val contex
         ) == PackageManager.PERMISSION_GRANTED
 
         if (granted) {
-            NotificationManagerCompat.from(context).notify(1, notification)
+            NotificationManagerCompat.from(context).notify(type.requestCode, notification)
         }
 
 

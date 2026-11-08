@@ -49,6 +49,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthState
+import com.notnex.myday.notification.ReminderType
 import com.notnex.myday.ui.navigation.AuthRoute
 import com.notnex.myday.viewmodel.SettingsViewModel
 
@@ -63,10 +64,15 @@ fun SettingsScreen(
 
     val context = LocalContext.current
     val activity = LocalActivity.current
+
     var showMenu by remember { mutableStateOf(false) }
-    val enabledReminder by settingsViewModel.reminderEnabled.collectAsState(false)
-    var showTimePicker by remember { mutableStateOf(false) }
-    val currentTime by settingsViewModel.reminderTime.collectAsState(null)
+    var timePickerType by remember { mutableStateOf<ReminderType?>(null) }
+
+    val dayNoteEnabled by settingsViewModel.dayNoteEnabled.collectAsState(false)
+    val dayNoteTime by settingsViewModel.dayNoteTime.collectAsState(null)
+
+    val bedtimeEnabled by settingsViewModel.bedtimeEnabled.collectAsState(false)
+    val bedtimeTime by settingsViewModel.bedtimeTime.collectAsState(null)
 
     LaunchedEffect(key1 = state.error) {
         state.error?.let { error ->
@@ -174,26 +180,42 @@ fun SettingsScreen(
             }
 
             ReminderRow(
-                time = currentTime,
-                enabled = enabledReminder,
-                onClick = { showTimePicker = true },
+                time = dayNoteTime,
+                title = R.string.notification_channel_name,
+                enabled = dayNoteEnabled,
+                onClick = { timePickerType = ReminderType.DAY_NOTE },
                 onEnabledChange = { isOn ->
                     if (isOn) {
-                        currentTime?.let { settingsViewModel.enableReminder(it) }
+                        dayNoteTime?.let { settingsViewModel.enableReminder(it, ReminderType.DAY_NOTE) }
                     } else {
-                        settingsViewModel.disableReminder()
+                        settingsViewModel.disableReminder(ReminderType.DAY_NOTE)
                     }
                 },
             )
 
-            if (showTimePicker) {
+            ReminderRow(
+                time = bedtimeTime,
+                title = R.string.time_to_sleep,
+                enabled = bedtimeEnabled,
+                onClick = { timePickerType = ReminderType.BEDTIME },
+                onEnabledChange = { isOn ->
+                    if (isOn) {
+                        bedtimeTime?.let { settingsViewModel.enableReminder(it, ReminderType.BEDTIME) }
+                    } else {
+                        settingsViewModel.disableReminder(ReminderType.BEDTIME)
+                    }
+                },
+            )
+
+            timePickerType?.let { type ->
+
                 ReminderTimeDialog(
-                    initialTime = currentTime,
+                    if (type == ReminderType.DAY_NOTE) dayNoteTime else bedtimeTime,
                     onConfirm = { time ->
-                        settingsViewModel.enableReminder(time)
-                        showTimePicker = false
+                        settingsViewModel.enableReminder(time, type)
+                        timePickerType = null
                     },
-                    onDismiss = { showTimePicker = false },
+                    onDismiss = { timePickerType = null },
                 )
             }
         }

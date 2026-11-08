@@ -37,4 +37,5 @@
     <string name="day_score">Rate your day</string>
     <string name="rate_the_day">Rate your day and write a few lines</string>
     <string name="notification_channel_description">Daily reminder to write down how your day went</string>
+    <string name="time_to_sleep">Time to sleep</string>
 </resources>

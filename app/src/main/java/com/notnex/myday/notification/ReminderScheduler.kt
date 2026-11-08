@@ -16,26 +16,27 @@ class ReminderScheduler @Inject constructor(
     private val settingsRepository: SettingsRepository,
 ) {
 
-    private fun reminderPendingIntent(): PendingIntent {
+    private fun reminderPendingIntent(type: ReminderType): PendingIntent {
         val intent = Intent(context, ReminderReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        intent.putExtra("reminder_type", type.name)
+        val pendingIntent = PendingIntent.getBroadcast(context, type.requestCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return pendingIntent
     }
 
-    fun scheduleNext(reminderTime: LocalTime) {
+    fun scheduleNext(type: ReminderType, reminderTime: LocalTime) {
         val localTimeAndDate = LocalDateTime.now()
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         alarmManager.setWindow(
             AlarmManager.RTC_WAKEUP,
             getTime(reminderTime, localTimeAndDate) + System.currentTimeMillis(),
             600000,
-            reminderPendingIntent()
+            reminderPendingIntent(type)
         )
     }
 
-    fun cancelReminder(){
+    fun cancelReminder(type: ReminderType){
         val alarmManager = context.getSystemService(AlarmManager::class.java)
-        alarmManager.cancel(reminderPendingIntent())
+        alarmManager.cancel(reminderPendingIntent(type))
     }
 
     fun getTime(time: LocalTime, localDateTime: LocalDateTime): Long{
@@ -48,9 +49,15 @@ class ReminderScheduler @Inject constructor(
         }
     }
 
-    suspend fun scheduleFromSettings(){
-        if (!settingsRepository.reminderEnabled.first()) return
-        val value = settingsRepository.reminderTime.first()
-        scheduleNext(value)
+    suspend fun scheduleFromSettings(type: ReminderType){
+        if (!settingsRepository.reminderEnabled(type).first()) return
+        val value = settingsRepository.reminderTime(type).first()
+        scheduleNext(type, value)
+    }
+
+    suspend fun scheduleAllFromSettings(){
+        for (type in ReminderType.entries){
+            scheduleFromSettings(type)
+        }
     }
 }

@@ -24,7 +24,7 @@ class BootReceiver: BroadcastReceiver() {
         val pending = goAsync()
         appScope.launch {
             try {
-                reminderScheduler.scheduleFromSettings()
+                reminderScheduler.scheduleAllFromSettings()
             } catch (e: Exception) {
                 Log.w("BootReceiver", "Reminder setting failed: ${e.message}", e)
             } finally {

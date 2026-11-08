@@ -36,4 +36,5 @@
     <string name="day_score">Оцените день</string>
     <string name="rate_the_day">Оцените день и запишите пару строк</string>
     <string name="notification_channel_description">Ежедневное напоминание записать, как прошёл день</string>
+    <string name="time_to_sleep">Пора ложиться спать</string>
 </resources>

@@ -19,13 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.notnex.myday.R
 import com.notnex.myday.ui.theme.MyDayTheme
 import java.time.LocalTime
 
 @Composable
 fun ReminderRow(
     time: LocalTime?,
+    title: Int,
     enabled: Boolean,
     onClick: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
@@ -51,7 +51,7 @@ fun ReminderRow(
                     }      // нажимается только левая часть
                     .padding(MyDayTheme.spacing.md)) {       // weight здесь заменяет Spacer: колонка забирает всё свободное место
                 Text(
-                    stringResource(R.string.notification_channel_name),
+                    stringResource(title),
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(

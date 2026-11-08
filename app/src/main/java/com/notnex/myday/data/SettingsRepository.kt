@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.notnex.myday.notification.ReminderType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -19,33 +20,33 @@ import javax.inject.Singleton
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 // Время напоминания хранится как минуты от полуночи: 21:00 → 1260.
-private val REMINDER_MINUTES = intPreferencesKey("reminder_minutes")
-private val REMINDER_ENABLED = booleanPreferencesKey("reminder_enabled")
+private fun minutesKey(type: ReminderType) = intPreferencesKey("${type.keyPrefix}_minutes")
+private fun enabledKey(type: ReminderType) = booleanPreferencesKey("${type.keyPrefix}_enabled")
 
 @Singleton
 class SettingsRepository @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
 
-    val reminderTime: Flow<LocalTime> = context.dataStore.data.map { prefs ->
-        val minutes: Int? = prefs[REMINDER_MINUTES]   // null, если ещё ни разу не сохраняли
-        LocalTime.of(minutes?.div(60) ?: 21, minutes?.rem(60) ?: 0)
+    fun reminderTime(type: ReminderType): Flow<LocalTime> = context.dataStore.data.map { prefs ->
+        val minutes: Int? = prefs[minutesKey(type)]   // null, если ещё ни разу не сохраняли
+        minutes?.let { LocalTime.of(it / 60, it % 60) } ?: type.defaultTime
     }
 
-    val reminderEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[REMINDER_ENABLED] ?: false
+    fun reminderEnabled(type: ReminderType): Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[enabledKey(type)] ?: false
     }
 
-    suspend fun saveReminderTime(time: LocalTime) {
+    suspend fun saveReminderTime(type: ReminderType, time: LocalTime) {
         context.dataStore.edit { prefs ->
-            prefs[REMINDER_ENABLED] = true
-            prefs[REMINDER_MINUTES] = time.hour * 60 + time.minute
+            prefs[enabledKey(type)] = true
+            prefs[minutesKey(type)] = time.hour * 60 + time.minute
         }
     }
 
-    suspend fun disableReminder(){
+    suspend fun disableReminder(type: ReminderType){
         context.dataStore.edit { prefs ->
-            prefs[REMINDER_ENABLED] = false
+            prefs[enabledKey(type)] = false
         }
     }
 }
