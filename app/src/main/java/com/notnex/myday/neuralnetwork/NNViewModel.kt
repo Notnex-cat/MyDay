@@ -16,7 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class NNViewModel @Inject constructor(
-    private val mistral: MistralRepository
+    private val mistral: AiRepository
 ) : ViewModel() {
 
     private val _scheduleState = MutableStateFlow<NNResult<List<ScheduleItem>>>(NNResult.Idle)

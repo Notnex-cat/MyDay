@@ -1,12 +1,9 @@
 package com.notnex.myday.data
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.notnex.myday.notification.ReminderType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -14,10 +11,6 @@ import kotlinx.coroutines.flow.map
 import java.time.LocalTime
 import javax.inject.Inject
 import javax.inject.Singleton
-
-// Один файл настроек на всё приложение. Свойство объявлено вне класса,
-// чтобы DataStore создавался один раз, а не при каждом новом объекте.
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 // Время напоминания хранится как минуты от полуночи: 21:00 → 1260.
 private fun minutesKey(type: ReminderType) = intPreferencesKey("${type.keyPrefix}_minutes")

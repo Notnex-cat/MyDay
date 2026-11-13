@@ -92,6 +92,9 @@ dependencies {
     // настройки пользователя: ключ — значение
     implementation(libs.androidx.datastore.preferences)
 
+    // шифрование секретов (ключ нейросети) ключом из Android Keystore
+    implementation(libs.tink.android)
+
     // Hilt
     implementation(libs.hilt.android)
     kapt(libs.hilt.android.compiler)

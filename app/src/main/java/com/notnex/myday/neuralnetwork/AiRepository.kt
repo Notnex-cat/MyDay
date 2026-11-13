@@ -1,12 +1,13 @@
 package com.notnex.myday.neuralnetwork
 
-import com.notnex.myday.BuildConfig
+import com.notnex.myday.data.AiSettingsRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -34,15 +35,21 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 @Singleton
-class MistralRepository @Inject constructor(
-    private val client: OkHttpClient
+class AiRepository @Inject constructor(
+    private val client: OkHttpClient,
+    private val aiSettingsRepository: AiSettingsRepository
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
     /** Генерирует расписание дня по свободному описанию пользователя. */
     suspend fun generateSchedule(userInput: String, date: LocalDate): List<ScheduleItem> {
-        val request = buildRequest(SCHEDULE_SYSTEM_PROMPT, userInput, stream = false)
+        val provider = aiSettingsRepository.provider.first()
+        val apiKey = aiSettingsRepository.apiKey(provider).first()
+            ?: throw IllegalStateException("Не задан ключ нейросети")
+        val request =
+            buildRequest(SCHEDULE_SYSTEM_PROMPT, userInput, stream = false, provider, apiKey)
         val body = client.newCall(request).await()
+
 
         val content = json.parseToJsonElement(body).jsonObject["choices"]
             ?.jsonArray?.firstOrNull()
@@ -68,7 +75,19 @@ class MistralRepository @Inject constructor(
 
     /** Стримит ответ по кусочкам. Отмена подписки обрывает HTTP-запрос. */
     fun streamFeedback(note: String): Flow<String> = callbackFlow {
-        val call = client.newCall(buildRequest(FEEDBACK_SYSTEM_PROMPT, note, stream = true))
+        val provider = aiSettingsRepository.provider.first()
+        val apiKey = aiSettingsRepository.apiKey(provider).first()
+            ?: throw IllegalStateException("Не задан ключ нейросети")
+        val call = client.newCall(
+            buildRequest(
+                FEEDBACK_SYSTEM_PROMPT,
+                note,
+                stream = true,
+                provider,
+                apiKey
+            )
+        )
+
         call.enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 close(e)
@@ -106,9 +125,15 @@ class MistralRepository @Inject constructor(
 
     // Тело собираем через JSON-билдер: пользовательский текст с кавычками и переводами строк
     // не ломает запрос (раньше он подставлялся в строку руками).
-    private fun buildRequest(systemPrompt: String, userInput: String, stream: Boolean): Request {
+    private fun buildRequest(
+        systemPrompt: String,
+        userInput: String,
+        stream: Boolean,
+        provider: AiProvider,
+        apiKey: String
+    ): Request {
         val body: JsonObject = buildJsonObject {
-            put("model", MODEL)
+            put("model", provider.model)
             put("stream", stream)
             putJsonArray("messages") {
                 addJsonObject {
@@ -122,9 +147,9 @@ class MistralRepository @Inject constructor(
             }
         }
         return Request.Builder()
-            .url(ENDPOINT)
+            .url(provider.endpoint)
             .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
-            .addHeader("Authorization", "Bearer ${BuildConfig.NN_API_KEY}")
+            .addHeader("Authorization", "Bearer $apiKey")
             .apply { if (stream) addHeader("Accept", "text/event-stream") }
             .build()
     }
@@ -158,20 +183,18 @@ class MistralRepository @Inject constructor(
     }
 
     private companion object {
-        const val MODEL = "mistral-small-latest"
-        const val ENDPOINT = "https://api.mistral.ai/v1/chat/completions"
         val JSON_MEDIA_TYPE = "application/json".toMediaType()
         val ID_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HHmm")
 
         const val SCHEDULE_SYSTEM_PROMPT =
             "Ты — ассистент по составлению расписания дня. По описанию пользователя сформируй подробное " +
-                "расписание в виде JSON-массива объектов с полями: time — время в формате \"HH:mm\", " +
-                "task — описание задачи. Пример: " +
-                "[{\"time\": \"07:30\", \"task\": \"Подъем и зарядка\"}, {\"time\": \"08:00\", \"task\": \"Завтрак\"}]. " +
-                "Пиши задачи на языке пользователя. Возвращай ТОЛЬКО JSON — никаких пояснений и комментариев."
+                    "расписание в виде JSON-массива объектов с полями: time — время в формате \"HH:mm\", " +
+                    "task — описание задачи. Пример: " +
+                    "[{\"time\": \"07:30\", \"task\": \"Подъем и зарядка\"}, {\"time\": \"08:00\", \"task\": \"Завтрак\"}]. " +
+                    "Пиши задачи на языке пользователя. Возвращай ТОЛЬКО JSON — никаких пояснений и комментариев."
 
         const val FEEDBACK_SYSTEM_PROMPT =
             "Ты персональный ассистент по саморазвитию. Пользователь описал свой день. " +
-                "Дай короткую обратную связь и совет. Отвечай на языке, на котором написана заметка."
+                    "Дай короткую обратную связь и совет. Отвечай на языке, на котором написана заметка."
     }
 }

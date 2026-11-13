@@ -45,7 +45,7 @@ class ReminderReceiver : BroadcastReceiver() {
 
                 val message = when (type){
                     ReminderType.DAY_NOTE -> reminderMessage(myDayRepository.observeDay(LocalDate.now()).first())
-                    ReminderType.BEDTIME -> R.string.time_to_sleep
+                    ReminderType.BEDTIME -> R.string.time_to_sleep_message
                 }
                 if (message != null) {
                     notifier.show(message, type)

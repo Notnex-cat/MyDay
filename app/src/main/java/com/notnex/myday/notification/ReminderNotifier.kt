@@ -47,7 +47,7 @@ class ReminderNotifier@Inject constructor(@ApplicationContext private val contex
 
         val notification = NotificationCompat.Builder(context, "notification_channel_id")
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
-            .setContentTitle(context.getString(R.string.how_day_gone))
+            .setContentTitle(context.getString(type.title))
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setContentText(context.getString(message))
@@ -62,7 +62,5 @@ class ReminderNotifier@Inject constructor(@ApplicationContext private val contex
         if (granted) {
             NotificationManagerCompat.from(context).notify(type.requestCode, notification)
         }
-
-
     }
 }

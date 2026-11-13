@@ -62,7 +62,7 @@ MyDay — Android-приложение (Kotlin, Jetpack Compose, один мод
 
 ### Нейросеть и вход
 
-- `MistralRepository` ходит в `api.mistral.ai` через OkHttp. Расписание — обычный запрос, ответ разбирается как JSON-массив; отзыв на день — SSE-стрим, текст копится в `NNViewModel`.
+- `AiRepository` ходит в `api.mistral.ai` через OkHttp. Расписание — обычный запрос, ответ разбирается как JSON-массив; отзыв на день — SSE-стрим, текст копится в `NNViewModel`.
 - `AuthRepository` — Firebase Auth (почта и Google One Tap). Его `authState` — единственный источник сведений о текущем пользователе; на нём держится `SyncManager`.
 - У варианта `release` нет signing config. Отпечатки debug-ключа в Firebase уже добавлены; для release-ключа их придётся добавить отдельно.
 
