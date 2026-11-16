@@ -16,11 +16,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.notnex.myday.auth.AuthViewModel
+import com.notnex.myday.ui.navigation.AiSettingsRoute
 import com.notnex.myday.ui.navigation.AuthRoute
 import com.notnex.myday.ui.navigation.SettingsRoute
+import com.notnex.myday.ui.screens.settingsactivity.AiSettingsScreen
 import com.notnex.myday.ui.screens.settingsactivity.AuthScreen
 import com.notnex.myday.ui.screens.settingsactivity.SettingsScreen
 import com.notnex.myday.ui.theme.MyDayTheme
+import com.notnex.myday.viewmodel.AiSettingsViewModel
 import com.notnex.myday.viewmodel.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -56,6 +59,13 @@ class Settings : ComponentActivity() {
                         }
                         composable<AuthRoute> {
                             AuthScreen(navController = navController)
+                        }
+                        composable<AiSettingsRoute> {
+                            val aiSettingsViewModel: AiSettingsViewModel = hiltViewModel()
+                            AiSettingsScreen(
+                                navController = navController,
+                                aiSettingsViewModel
+                            )
                         }
                     }
                 }

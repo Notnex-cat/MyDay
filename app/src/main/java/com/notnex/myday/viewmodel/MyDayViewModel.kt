@@ -88,6 +88,12 @@ class MyDayViewModel @Inject constructor(
         viewModelScope.launch { repository.deleteScheduleItem(id) }
     }
 
+    fun replaceDaySchedule(date: LocalDate, items: List<ScheduleItem>){
+        viewModelScope.launch {
+            repository.replaceDaySchedule(date, items)
+        }
+    }
+
     companion object {
         const val KEY_DATE = "selected_date"
         const val NOTE_SAVE_DELAY_MS = 1500L

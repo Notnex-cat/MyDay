@@ -37,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.notnex.myday.R
 import com.notnex.myday.data.TIME_FORMAT
+import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.MyDayViewModel
 import java.time.LocalTime
 
@@ -105,8 +106,8 @@ fun EditScheduleScreen(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(MyDayTheme.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(MyDayTheme.spacing.md)
         ) {
             OutlinedTextField(
                 value = title,
@@ -122,7 +123,7 @@ fun EditScheduleScreen(
                 Icon(Icons.Default.Schedule, contentDescription = null)
                 Text(
                     text = stringResource(R.string.schedule_item_time, time.format(TIME_FORMAT)),
-                    modifier = Modifier.padding(start = 8.dp)
+                    modifier = Modifier.padding(start = MyDayTheme.spacing.xs)
                 )
             }
 

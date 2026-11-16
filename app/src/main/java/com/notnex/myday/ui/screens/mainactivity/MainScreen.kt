@@ -75,6 +75,7 @@ import com.notnex.myday.ui.navigation.EditScheduleRoute
 import com.notnex.myday.ui.Settings
 import com.notnex.myday.ui.navigation.PracticeRoute
 import com.notnex.myday.ui.navigation.toDayNoteRoute
+import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.ui.theme.RatingBar
 import com.notnex.myday.viewmodel.MyDayViewModel
 import kotlinx.coroutines.launch
@@ -219,7 +220,7 @@ fun SharedTransitionScope.MainScreen(
 
                                 Column(
                                     modifier = Modifier
-                                        .padding(4.dp)
+                                        .padding(MyDayTheme.spacing.xxs)
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(
                                             if (isSelected) MaterialTheme.colorScheme.primaryContainer
@@ -227,7 +228,7 @@ fun SharedTransitionScope.MainScreen(
                                             else Color.Transparent
                                         )
                                         .clickable { myDayViewModel.setSelectedDate(date) }
-                                        .padding(vertical = 6.dp, horizontal = 12.dp),
+                                        .padding(vertical = MyDayTheme.spacing.xs, horizontal = MyDayTheme.spacing.sm),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
                                     Text(
@@ -263,7 +264,7 @@ fun SharedTransitionScope.MainScreen(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
+                                .padding(MyDayTheme.spacing.md)
                                 .sharedBounds(
                                     sharedContentState = rememberSharedContentState(
                                         key = CARD_EXPLODE_BOUNDS_KEY
@@ -278,13 +279,13 @@ fun SharedTransitionScope.MainScreen(
                             Text(
                                 text = text.ifEmpty { stringResource(R.string.write_something) },
                                 color = if (text.isEmpty()) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier.padding(MyDayTheme.spacing.md),
                                 maxLines = 10
                             )
                         }
                         Box(
                             modifier = Modifier
-                                .padding(16.dp)
+                                .padding(MyDayTheme.spacing.md)
                                 .fillMaxWidth(),
                             contentAlignment = Alignment.Center
                         ) {
@@ -315,14 +316,14 @@ fun SharedTransitionScope.MainScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(4.dp)
+                                        .padding(MyDayTheme.spacing.xxs)
                                         .clickable {
                                             navController.navigate(EditScheduleRoute(item.id))
                                         }
                                 ) {
                                     Text(
                                         text = "${item.time.format(TIME_FORMAT)} — ${item.scheduleItem}",
-                                        modifier = Modifier.padding(14.dp)
+                                        modifier = Modifier.padding(MyDayTheme.spacing.md)
                                     )
                                 }
                             }

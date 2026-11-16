@@ -1,12 +1,16 @@
 package com.notnex.myday.viewmodel
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.notnex.myday.data.AiSettingsRepository
 import com.notnex.myday.data.SettingsRepository
 import com.notnex.myday.notification.ReminderScheduler
 import com.notnex.myday.notification.ReminderType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import javax.inject.Inject
@@ -18,7 +22,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
-    private val savedStateHandle: SavedStateHandle,
+    private val aiSettingsRepository: AiSettingsRepository,
     private val reminderScheduler: ReminderScheduler
 ) : ViewModel() {
 
@@ -28,20 +32,35 @@ class SettingsViewModel @Inject constructor(
     val bedtimeTime = repository.reminderTime(ReminderType.BEDTIME)
     val bedtimeEnabled = repository.reminderEnabled(ReminderType.BEDTIME)
 
+    val aiEnabled = aiSettingsRepository.aiEnabled
 
-    fun enableReminder(time: LocalTime, type: ReminderType){
-        viewModelScope.launch{
-            repository.saveReminderTime( type, time)
-            reminderScheduler.scheduleNext( type, time)
+    val selectedAi = aiSettingsRepository.provider
+
+    fun enableReminder(time: LocalTime, type: ReminderType) {
+        viewModelScope.launch {
+            repository.saveReminderTime(type, time)
+            reminderScheduler.scheduleNext(type, time)
         }
     }
 
     // Флаг пишется раньше отмены: если будильник сработает в этот момент, приёмник
     // уже увидит «выключено» и не поставит новый.
-    fun disableReminder(type: ReminderType){
-        viewModelScope.launch{
-            repository.disableReminder( type)
-            reminderScheduler.cancelReminder( type)
+    fun disableReminder(type: ReminderType) {
+        viewModelScope.launch {
+            repository.disableReminder(type)
+            reminderScheduler.cancelReminder(type)
         }
     }
+
+    fun enableAI(enabled: Boolean) {
+        viewModelScope.launch {
+            aiSettingsRepository.setAiEnabledOrDisabled(enabled)
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val hasApiKey: Flow<Boolean> = selectedAi
+        .flatMapLatest { provider -> aiSettingsRepository.apiKey(provider) }
+        .map { key -> key != null }
+
 }

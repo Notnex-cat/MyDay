@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.notnex.myday.ui.theme.MyDayTheme
-import java.time.LocalTime
 
 /**
  * Строка настроек напоминания. О ViewModel ничего не знает: данные приходят параметрами,
@@ -28,12 +27,13 @@ import java.time.LocalTime
  * текст открывает выбор времени, переключатель только включает и выключает.
  */
 @Composable
-fun ReminderRow(
-    time: LocalTime?,
+fun SettingsSwitchRow(
+    subtitle: String,
     title: Int,
     enabled: Boolean,
     onClick: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
+    isError: Boolean = false
 ) {
     ElevatedCard(
         elevation = CardDefaults.cardElevation(
@@ -42,7 +42,12 @@ fun ReminderRow(
             containerColor = MaterialTheme.colorScheme.onTertiary
         ), modifier = Modifier.Companion
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(
+                start = MyDayTheme.spacing.md,
+                top = MyDayTheme.spacing.xs,
+                end = MyDayTheme.spacing.md,
+                bottom = MyDayTheme.spacing.xs
+            )
     ) {
         Row(
             modifier = Modifier.height(IntrinsicSize.Min),   // чтобы полоса знала высоту строки
@@ -60,13 +65,12 @@ fun ReminderRow(
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = time?.toString() ?: "",
+                    text = subtitle ?: "",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (enabled) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        // 38 % — так в Material 3 выглядит неактивный элемент
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    color = when {
+                        isError -> MaterialTheme.colorScheme.error;
+                        enabled -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     },
                 )
             }

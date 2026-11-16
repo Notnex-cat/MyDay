@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -50,6 +51,8 @@ class MyDayRepository @Inject constructor(
     fun observeSchedule(date: LocalDate): Flow<List<ScheduleEntity>> = scheduleDao.observeByDate(date)
 
     suspend fun getScheduleItem(id: String): ScheduleEntity? = scheduleDao.getById(id)
+
+
 
     // ---------- День ----------
 
@@ -174,6 +177,18 @@ class MyDayRepository @Inject constructor(
                 Log.w(TAG, "Cloud push failed: ${e.message}")
             }
         }
+    }
+
+    // Экран закрывается сразу после «Сохранить», и viewModelScope отменяется. NonCancellable
+    // доводит до конца всю замену, а не только отдельные записи внутри write.
+    suspend fun replaceDaySchedule(date: LocalDate, items: List<ScheduleItem>) = withContext(NonCancellable) {
+        val keepIds = items.map { it.id }.toSet()
+        val saved = observeSchedule(date).first()
+
+        saved.filter { it.id !in keepIds }
+            .forEach { deleteScheduleItem(it.id) }
+
+        addScheduleItems(date, items)
     }
 
     private companion object {

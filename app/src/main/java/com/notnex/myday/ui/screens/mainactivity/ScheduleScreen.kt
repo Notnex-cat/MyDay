@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -20,21 +21,25 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.notnex.myday.R
 import com.notnex.myday.data.TIME_FORMAT
+import com.notnex.myday.data.toScheduleItem
 import com.notnex.myday.neuralnetwork.NNResult
 import com.notnex.myday.neuralnetwork.NNViewModel
+import com.notnex.myday.neuralnetwork.ScheduleItem
+import com.notnex.myday.neuralnetwork.aiErrorText
+import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.MyDayViewModel
 import java.time.LocalDate
 
@@ -48,11 +53,37 @@ fun ScheduleScreen(
     var userInput by remember { mutableStateOf("") }
     val state by nnViewModel.scheduleState.collectAsState()
 
+    val savedFlow = remember(date) { viewModel.observeSchedule(date) }
+    val savedSchedule by savedFlow.collectAsState(emptyList())
+
+    // Черновик дня: сначала сохранённые пункты, потом к ним добавляются предложения нейросети.
+    // «Сохранить» делает день ровно таким, как черновик. Живёт в remember, поэтому поворот экрана
+    // его сбрасывает — перенести во ViewModel.
+    val draft = remember(date) { mutableStateListOf<ScheduleItem>() }
+    val newIds = remember(date) { mutableStateListOf<String>() }
+
+    LaunchedEffect(savedSchedule) {
+        // Только первая загрузка: обновление из базы не должно затирать начатую правку.
+        if (draft.isEmpty()) draft.addAll(savedSchedule.map { it.toScheduleItem() })
+    }
+
+    LaunchedEffect(state) {
+        val result = state
+        if (result is NNResult.Success) {
+            // Повторный запрос заменяет прошлые предложения нейросети, сохранённые пункты не трогает.
+            draft.removeAll { it.id in newIds }
+            newIds.clear()
+            draft.addAll(result.data)
+            newIds.addAll(result.data.map { it.id })
+            draft.sortBy { it.time }
+        }
+    }
+
     Scaffold { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = MyDayTheme.spacing.md)
         ) {
             OutlinedTextField(
                 value = userInput,
@@ -61,64 +92,69 @@ fun ScheduleScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(MyDayTheme.spacing.xs))
 
             Button(
-                onClick = { nnViewModel.requestSchedule(userInput, date) },
+                onClick = { nnViewModel.requestSchedule(userInput, date, draft.toList()) },
                 enabled = userInput.isNotBlank() && state !is NNResult.Loading
             ) {
                 Text(stringResource(R.string.get_schedule))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(MyDayTheme.spacing.md))
 
             when (val current = state) {
-                is NNResult.Idle -> Unit
                 is NNResult.Loading -> CircularProgressIndicator()
-                is NNResult.Success -> {
-                    // Черновик, который можно прорядить перед сохранением
-                    val draft = remember(current.data) { current.data.toMutableStateList() }
+                is NNResult.Error -> Text(
+                    text = aiErrorText(current.exception),
+                    color = MaterialTheme.colorScheme.error
+                )
+                else -> Unit
+            }
 
-                    LazyColumn {
-                        items(items = draft, key = { it.id }) { item ->
-                            Card(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                            ) {
-                                Row(modifier = Modifier.fillMaxWidth()) {
-                                    Text(
-                                        "${item.time.format(TIME_FORMAT)} — ${item.task}",
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .padding(14.dp)
-                                    )
-                                    IconButton(onClick = { draft.remove(item) }) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = stringResource(R.string.delete)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        item {
-                            Button(
-                                enabled = draft.isNotEmpty(),
-                                onClick = {
-                                    viewModel.addScheduleItems(date, draft.toList())
-                                    navController.popBackStack()
-                                }
-                            ) {
-                                Text(stringResource(R.string.save))
+            LazyColumn {
+                items(items = draft, key = { it.id }) { item ->
+                    val isNew = item.id in newIds
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = MyDayTheme.spacing.xxs),
+                        colors = if (isNew) {
+                            CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        } else {
+                            CardDefaults.cardColors()
+                        },
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                "${item.time.format(TIME_FORMAT)} — ${item.task}",
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(MyDayTheme.spacing.md)
+                            )
+                            IconButton(onClick = { draft.remove(item) }) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.delete)
+                                )
                             }
                         }
                     }
                 }
-                is NNResult.Error -> Text(
-                    text = stringResource(R.string.error_with_message, current.exception.message.orEmpty()),
-                    color = MaterialTheme.colorScheme.error
-                )
+                item {
+                    // Пустой черновик тоже сохраняется: так день можно очистить.
+                    Button(
+                        onClick = {
+                            viewModel.replaceDaySchedule(date, draft.toList())
+                            navController.popBackStack()
+                        }
+                    ) {
+                        Text(stringResource(R.string.save))
+                    }
+                }
             }
         }
     }

@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
@@ -50,7 +52,9 @@ import coil.compose.AsyncImage
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthState
 import com.notnex.myday.notification.ReminderType
+import com.notnex.myday.ui.navigation.AiSettingsRoute
 import com.notnex.myday.ui.navigation.AuthRoute
+import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,7 +64,7 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
     navController: NavController,
     settingsViewModel: SettingsViewModel
-) {
+    ) {
 
     val context = LocalContext.current
     val activity = LocalActivity.current
@@ -76,12 +80,27 @@ fun SettingsScreen(
     val bedtimeEnabled by settingsViewModel.bedtimeEnabled.collectAsState(false)
     val bedtimeTime by settingsViewModel.bedtimeTime.collectAsState(null)
 
+    val aiEnabled by settingsViewModel.aiEnabled.collectAsState(false)
+    val hasApiKey by settingsViewModel.hasApiKey.collectAsState(true)
+    val aiKeyMissing = aiEnabled && !hasApiKey
+
     LaunchedEffect(key1 = state.error) {
         state.error?.let { error ->
             Toast.makeText(
                 context, error, Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    timePickerType?.let { type ->
+        ReminderTimeDialog(
+            if (type == ReminderType.DAY_NOTE) dayNoteTime else bedtimeTime,
+            onConfirm = { time ->
+                settingsViewModel.enableReminder(time, type)
+                timePickerType = null
+            },
+            onDismiss = { timePickerType = null },
+        )
     }
 
     Scaffold(
@@ -100,7 +119,9 @@ fun SettingsScreen(
                 })
         },
     ) { innerPadding ->
-        Column(modifier = Modifier.Companion.padding(innerPadding)) {
+        Column(modifier = Modifier
+            .padding(innerPadding)
+            .verticalScroll(rememberScrollState())) {
             ElevatedCard(
                 elevation = CardDefaults.cardElevation(
                     defaultElevation = 8.dp
@@ -108,7 +129,7 @@ fun SettingsScreen(
                     containerColor = MaterialTheme.colorScheme.onTertiary
                 ), modifier = Modifier.Companion
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(MyDayTheme.spacing.md, bottom = MyDayTheme.spacing.xs, end = MyDayTheme.spacing.md)
                     .clickable {
                         if (state.user == null) {
                             navController.navigate(AuthRoute)
@@ -124,11 +145,11 @@ fun SettingsScreen(
                                 contentDescription = stringResource(R.string.profile_picture),
                                 modifier = Modifier
                                     .size(80.dp)
-                                    .padding(16.dp)
+                                    .padding(MyDayTheme.spacing.md)
                                     .clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(MyDayTheme.spacing.md))
                         }
                         Column {
                             state.user.username?.let { name ->
@@ -150,7 +171,8 @@ fun SettingsScreen(
                         }
 
                         Box(
-                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.TopEnd
                         ) {
                             IconButton(onClick = { showMenu = !showMenu }) {
                                 Icon(
@@ -180,47 +202,53 @@ fun SettingsScreen(
                     )
                 }
             }
-
-            ReminderRow(
-                time = dayNoteTime,
+            //переключатель напоминания о заметке
+            SettingsSwitchRow(
+                subtitle = dayNoteTime?.toString() ?: "",
                 title = R.string.notification_channel_name,
                 enabled = dayNoteEnabled,
                 onClick = { timePickerType = ReminderType.DAY_NOTE },
                 onEnabledChange = { isOn ->
                     if (isOn) {
                         // Переключатель возвращает прежнее время; пока DataStore не прочитан (null), ждём.
-                        dayNoteTime?.let { settingsViewModel.enableReminder(it, ReminderType.DAY_NOTE) }
+                        dayNoteTime?.let {
+                            settingsViewModel.enableReminder(
+                                it, ReminderType.DAY_NOTE
+                            )
+                        }
                     } else {
                         settingsViewModel.disableReminder(ReminderType.DAY_NOTE)
                     }
                 },
             )
-
-            ReminderRow(
-                time = bedtimeTime,
+            // переключатель время спать
+            SettingsSwitchRow(
+                subtitle = bedtimeTime?.toString() ?: "",
                 title = R.string.time_to_sleep,
                 enabled = bedtimeEnabled,
                 onClick = { timePickerType = ReminderType.BEDTIME },
                 onEnabledChange = { isOn ->
                     if (isOn) {
-                        bedtimeTime?.let { settingsViewModel.enableReminder(it, ReminderType.BEDTIME) }
+                        bedtimeTime?.let {
+                            settingsViewModel.enableReminder(
+                                it, ReminderType.BEDTIME
+                            )
+                        }
                     } else {
                         settingsViewModel.disableReminder(ReminderType.BEDTIME)
                     }
                 },
             )
-
-            timePickerType?.let { type ->
-
-                ReminderTimeDialog(
-                    if (type == ReminderType.DAY_NOTE) dayNoteTime else bedtimeTime,
-                    onConfirm = { time ->
-                        settingsViewModel.enableReminder(time, type)
-                        timePickerType = null
-                    },
-                    onDismiss = { timePickerType = null },
-                )
-            }
+            //переключатель  для ии
+            SettingsSwitchRow(
+                title = R.string.ai_settings,
+                subtitle = stringResource(if (aiKeyMissing) R.string.no_api_key else R.string.ai_settings_subtitle),
+                enabled = aiEnabled,
+                isError = aiKeyMissing,
+                onClick = { navController.navigate(AiSettingsRoute) },
+                onEnabledChange = { isOn -> settingsViewModel.enableAI(isOn) },
+            )
         }
     }
 }
+

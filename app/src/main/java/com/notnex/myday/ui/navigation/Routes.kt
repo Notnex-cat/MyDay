@@ -24,6 +24,9 @@ data class EditScheduleRoute(val id: String)
 data object SettingsRoute
 
 @Serializable
+data object AiSettingsRoute
+
+@Serializable
 data object PracticeRoute
 
 

@@ -1,6 +1,7 @@
 package com.notnex.myday.neuralnetwork
 
 import com.notnex.myday.data.AiSettingsRepository
+import com.notnex.myday.data.TIME_FORMAT
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
@@ -28,7 +29,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.IOException
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -42,12 +43,20 @@ class AiRepository @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true }
 
     /** Генерирует расписание дня по свободному описанию пользователя. */
-    suspend fun generateSchedule(userInput: String, date: LocalDate): List<ScheduleItem> {
+    suspend fun generateSchedule(
+        userInput: String,
+        date: LocalDate,
+        existing: List<ScheduleItem>
+    ): List<ScheduleItem> {
         val provider = aiSettingsRepository.provider.first()
         val apiKey = aiSettingsRepository.apiKey(provider).first()
             ?: throw IllegalStateException("Не задан ключ нейросети")
+
+        val planned = existing.joinToString("\n") { "${it.time.format(TIME_FORMAT)} — ${it.task}" }
+        val fullInput = if (existing.isEmpty()) userInput
+        else "$userInput\n\nУже запланировано:\n$planned\nНе повторяй эти пункты, верни только новые."
         val request =
-            buildRequest(SCHEDULE_SYSTEM_PROMPT, userInput, stream = false, provider, apiKey)
+            buildRequest(SCHEDULE_SYSTEM_PROMPT, fullInput, stream = false, provider, apiKey)
         val body = client.newCall(request).await()
 
 
@@ -60,12 +69,9 @@ class AiRepository @Inject constructor(
 
         val items = json.decodeFromString<List<ScheduleItemResponse>>(extractJsonArray(content))
 
-        // id = YYYYMMDD_HHmm: детерминированный, поэтому повторная генерация на то же время
-        // обновляет пункт, а не плодит дубли.
-        val datePart = date.format(DateTimeFormatter.BASIC_ISO_DATE)
         return items.map { item ->
             ScheduleItem(
-                id = "${datePart}_${item.time.format(ID_TIME_FORMAT)}",
+                id = UUID.randomUUID().toString(),
                 date = date,
                 time = item.time,
                 task = item.task
@@ -96,7 +102,7 @@ class AiRepository @Inject constructor(
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     try {
-                        if (!it.isSuccessful) throw IOException("HTTP ${it.code}")
+                        if (!it.isSuccessful) throw AiHttpException(it.code, it.body.string())
                         val source = it.body.source()
                         while (true) {
                             val line = source.readUtf8Line() ?: break
@@ -172,7 +178,7 @@ class AiRepository @Inject constructor(
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     try {
-                        if (!it.isSuccessful) throw IOException("HTTP ${it.code}")
+                        if (!it.isSuccessful) throw AiHttpException(it.code, it.body.string())
                         continuation.resume(it.body.string())
                     } catch (e: IOException) {
                         continuation.resumeWithException(e)
@@ -184,7 +190,6 @@ class AiRepository @Inject constructor(
 
     private companion object {
         val JSON_MEDIA_TYPE = "application/json".toMediaType()
-        val ID_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HHmm")
 
         const val SCHEDULE_SYSTEM_PROMPT =
             "Ты — ассистент по составлению расписания дня. По описанию пользователя сформируй подробное " +
@@ -198,3 +203,5 @@ class AiRepository @Inject constructor(
                     "Дай короткую обратную связь и совет. Отвечай на языке, на котором написана заметка."
     }
 }
+
+class AiHttpException(val code: Int, body: String) : IOException("HTTP $code: $body")

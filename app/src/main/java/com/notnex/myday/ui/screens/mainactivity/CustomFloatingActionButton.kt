@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.notnex.myday.R
 import com.notnex.myday.ui.navigation.toScheduleRoute
+import com.notnex.myday.ui.theme.MyDayTheme
 import java.time.LocalDate
 
 
@@ -66,12 +67,12 @@ fun CustomFloatingActionButton(
         AnimatedVisibility(visible = isExpanded) {
             Column(
                 modifier = Modifier
-                    .padding(bottom = 8.dp)
+                    .padding(bottom = MyDayTheme.spacing.xs)
                     .background(
                         MaterialTheme.colorScheme.surfaceContainer,
                         shape = RoundedCornerShape(18.dp)
                     )
-                    .padding(vertical = 12.dp)
+                    .padding(vertical = MyDayTheme.spacing.sm)
             ) {
                 TextButton(onClick = {
                     isExpanded = false
@@ -79,13 +80,13 @@ fun CustomFloatingActionButton(
                 }
                 ) {
                     Icon(Icons.AutoMirrored.Default.MenuOpen, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(MyDayTheme.spacing.xs))
                     Text(stringResource(R.string.create_schedule))
                 }
 
                 TextButton(onClick = { /* TODO: Handle New Reminder */ }) {
                     Icon(Icons.Default.Alarm, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(MyDayTheme.spacing.xs))
                     Text(stringResource(R.string.new_reminder))
                 }
             }

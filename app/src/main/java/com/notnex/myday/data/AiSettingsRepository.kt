@@ -1,6 +1,7 @@
 package com.notnex.myday.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.notnex.myday.neuralnetwork.AiProvider
@@ -17,6 +18,7 @@ import javax.inject.Singleton
 private val PROVIDER_KEY = stringPreferencesKey("ai_provider")
 
 private fun apiKeyKey(provider: AiProvider) = stringPreferencesKey("ai_api_key_${provider.name}")
+private val enabledKey = booleanPreferencesKey("ai_enabled")
 
 @Singleton
 class AiSettingsRepository @Inject constructor(
@@ -29,6 +31,10 @@ class AiSettingsRepository @Inject constructor(
 
     suspend fun saveProvider(provider: AiProvider) {
         context.dataStore.edit { prefs -> prefs[PROVIDER_KEY] = provider.name }
+    }
+
+    val providersWithKey: Flow<Set<AiProvider>> = context.dataStore.data.map { prefs ->
+        AiProvider.entries.filter{ prefs[apiKeyKey(it)] != null}.toSet()
     }
 
     fun apiKey(provider: AiProvider): Flow<String?> = context.dataStore.data
@@ -44,5 +50,15 @@ class AiSettingsRepository @Inject constructor(
 
     suspend fun clearApiKey(provider: AiProvider) {
         context.dataStore.edit { prefs -> prefs.remove(apiKeyKey(provider)) }
+    }
+
+    val aiEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[enabledKey] ?: false
+    }
+
+    suspend fun setAiEnabledOrDisabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[enabledKey] = enabled
+        }
     }
 }

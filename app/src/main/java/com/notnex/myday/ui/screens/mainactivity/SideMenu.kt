@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.notnex.myday.R
+import com.notnex.myday.ui.theme.MyDayTheme
 
 @Composable
 fun SideMenu(
@@ -37,22 +38,22 @@ fun SideMenu(
                 drawerContentColor = MaterialTheme.colorScheme.onBackground,
                 drawerTonalElevation = 6.dp
             ) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Spacer(Modifier.height(12.dp))
+                Column(modifier = Modifier.padding(horizontal = MyDayTheme.spacing.md)) {
+                    Spacer(Modifier.height(MyDayTheme.spacing.sm))
                     Text(
                         stringResource(R.string.app_name),
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(MyDayTheme.spacing.md),
                         style = MaterialTheme.typography.titleLarge
                     )
                     HorizontalDivider()
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(MyDayTheme.spacing.xs))
                     NavigationDrawerItem(
                         label = { Text(stringResource(R.string.settings)) },
                         selected = false,
                         icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
                         onClick = onOpenSettings
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(MyDayTheme.spacing.xs))
                     NavigationDrawerItem(
                         label = { Text(stringResource(R.string.practice))},
                         selected = false,

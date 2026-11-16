@@ -36,14 +36,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.notnex.myday.R
 import com.notnex.myday.neuralnetwork.NNResult
 import com.notnex.myday.neuralnetwork.NNViewModel
+import com.notnex.myday.neuralnetwork.aiErrorText
 import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
+import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.MyDayViewModel
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -132,7 +133,7 @@ fun SharedTransitionScope.DayNote(
             )
 
             Button(
-                modifier = Modifier.padding(top = 16.dp),
+                modifier = Modifier.padding(top = MyDayTheme.spacing.md),
                 enabled = noteText.isNotBlank() && !isLoading,
                 onClick = {
                     nnViewModel.requestFeedback(noteText) { fullText ->
@@ -148,23 +149,20 @@ fun SharedTransitionScope.DayNote(
             ) {
                 item {
                     if (isLoading && streamedFeedback.isEmpty()) {
-                        CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                        CircularProgressIndicator(modifier = Modifier.padding(MyDayTheme.spacing.md))
                     }
                     if (feedbackState is NNResult.Error) {
                         Text(
-                            text = stringResource(
-                                R.string.error_with_message,
-                                (feedbackState as NNResult.Error).exception.message.orEmpty()
-                            ),
+                            text = aiErrorText((feedbackState as NNResult.Error).exception),
                             color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(MyDayTheme.spacing.md)
                         )
                     }
                     Text(
                         text = feedback,
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier
-                            .padding(16.dp)
+                            .padding(MyDayTheme.spacing.md)
                             .fillMaxWidth(),
                     )
                 }

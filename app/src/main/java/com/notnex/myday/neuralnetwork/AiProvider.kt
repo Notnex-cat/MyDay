@@ -8,4 +8,5 @@ enum class AiProvider(
     GEMINI("Gemini", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini-flash-latest"),
     MISTRAL("Mistral", "https://api.mistral.ai/v1/chat/completions", "mistral-small-latest"),
     DEEPSEEK("DeepSeek", "https://api.deepseek.com/chat/completions", "deepseek-chat"),
+    GROQ("Groq", "https://api.groq.com/openai/v1/chat/completions", "openai/gpt-oss-20b"),
 }

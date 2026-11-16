@@ -5,6 +5,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.notnex.myday.neuralnetwork.ScheduleItem
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -30,4 +31,11 @@ data class ScheduleEntity(
     val score: Double = NOT_RATED,                     // оценка выполнения
     val lastUpdated: Long = System.currentTimeMillis(),
     val aiFeedback: String = ""
+)
+
+fun ScheduleEntity.toScheduleItem() = ScheduleItem(
+    id = id,
+    date = scheduleDate,
+    time = time,
+    task = scheduleItem,
 )

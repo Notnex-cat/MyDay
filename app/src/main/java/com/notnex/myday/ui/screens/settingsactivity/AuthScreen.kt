@@ -49,6 +49,7 @@ import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthViewModel
+import com.notnex.myday.ui.theme.MyDayTheme
 
 @Composable
 fun AuthScreen(
@@ -103,7 +104,7 @@ fun AuthScreen(
                 ),
                 value = emailState.value, onValueChange = { emailState.value = it }
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(MyDayTheme.spacing.sm))
             TextField(
                 modifier = Modifier
                     .border(width = 2.dp, color = Color.DarkGray, shape = RoundedCornerShape(20.dp)),
@@ -118,7 +119,7 @@ fun AuthScreen(
                 //Button(onClick = { viewModel.clearError() }) { Text("Очистить ошибку") }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(MyDayTheme.spacing.sm))
 
             Button(onClick = {
                 authViewModel.signInWithEmail(emailState.value, passwordState.value)
@@ -131,7 +132,7 @@ fun AuthScreen(
                 Text(text = stringResource(R.string.sign_in))
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(MyDayTheme.spacing.sm))
 
             Button(onClick = {
                 authViewModel.signUpWithEmail(emailState.value, passwordState.value)
@@ -144,7 +145,7 @@ fun AuthScreen(
                 Text(text = stringResource(R.string.sign_up))
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(MyDayTheme.spacing.sm))
 
             Button(onClick = {
                 oneTapClient.beginSignIn(
@@ -181,7 +182,7 @@ fun AuthScreen(
                         contentDescription = stringResource(R.string.sign_in_with_google),
                         modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(MyDayTheme.spacing.sm))
                     Text(text = stringResource(R.string.sign_in_with_google))
                 }
             }

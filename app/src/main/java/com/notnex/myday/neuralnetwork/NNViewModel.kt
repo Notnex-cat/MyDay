@@ -32,12 +32,12 @@ class NNViewModel @Inject constructor(
     private var scheduleJob: Job? = null
     private var feedbackJob: Job? = null
 
-    fun requestSchedule(userInput: String, date: LocalDate) {
+    fun requestSchedule(userInput: String, date: LocalDate, draft: List<ScheduleItem>) {
         scheduleJob?.cancel()
         scheduleJob = viewModelScope.launch {
             _scheduleState.value = NNResult.Loading
             _scheduleState.value = try {
-                NNResult.Success(mistral.generateSchedule(userInput, date))
+                NNResult.Success(mistral.generateSchedule(userInput, date, draft))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

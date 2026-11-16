@@ -38,5 +38,23 @@
     <string name="rate_the_day">Rate your day and write a few lines</string>
     <string name="notification_channel_description">Daily reminder to write down how your day went</string>
     <string name="time_to_sleep">Time to sleep</string>
+    <string name="ai_settings">AI Settings</string>
+    <string name="ai_settings_subtitle">Provider, api key and access settings</string>
+    <string name="no_api_key">No API-key</string>
+    <string name="ai_provider">Provider</string>
     <string name="time_to_sleep_message">It’s time to brush your teeth and go to bed</string>
+    <string name="key_saved">Key saved</string>
+    <string name="api_key">API key</string>
+    <string name="not_supported_countries">Some providers are not available in certain countries</string>
+    <string name="ai_error_network">Can\'t reach the AI. Check your internet connection or VPN</string>
+    <string name="ai_error_bad_request">The AI rejected the request. The provider may be unavailable in your country: try another provider or a VPN</string>
+    <string name="ai_error_unauthorized">The API key doesn\'t work. Check in AI settings that it was copied in full</string>
+    <string name="ai_error_payment">Your balance with the AI provider has run out. Top it up on the provider\'s website</string>
+    <string name="ai_error_forbidden">This key has no access to the AI. Check the key and its settings on the provider\'s website</string>
+    <string name="ai_error_not_found">The provider couldn\'t find the model. It may have been renamed: update the app or choose another provider</string>
+    <string name="ai_error_timeout">The AI took too long to respond. Please try again</string>
+    <string name="ai_error_rate_limit">AI request limit reached. Wait a little or check your plan with the provider</string>
+    <string name="ai_error_server">Something went wrong on the AI\'s side. Please try again later</string>
+    <string name="ai_error_unavailable">The AI is overloaded right now. Try again in a few minutes</string>
+    <string name="ai_error_unknown">Couldn\'t get a response from the AI (code %1$d)</string>
 </resources>

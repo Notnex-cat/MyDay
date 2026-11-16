@@ -37,5 +37,23 @@
     <string name="rate_the_day">Оцените день и запишите пару строк</string>
     <string name="notification_channel_description">Ежедневное напоминание записать, как прошёл день</string>
     <string name="time_to_sleep">Пора ложиться спать</string>
+    <string name="ai_settings">Настройки ИИ</string>
+    <string name="ai_settings_subtitle">Провайдер, ключ API и настройки доступа</string>
+    <string name="no_api_key">Нет ключа API</string>
+    <string name="ai_provider">Провайдер</string>
     <string name="time_to_sleep_message">Время чистить зубки и баиньки</string>
+    <string name="key_saved">Ключ сохранён</string>
+    <string name="api_key">Ключ API</string>
+    <string name="not_supported_countries">Некоторые провайдеры недоступны в отдельных странах</string>
+    <string name="ai_error_network">Нет связи с нейросетью. Проверьте интернет или VPN</string>
+    <string name="ai_error_bad_request">Нейросеть не приняла запрос. Возможно, провайдер недоступен в вашей стране: попробуйте другого провайдера или VPN</string>
+    <string name="ai_error_unauthorized">Ключ API не подходит. Проверьте в настройках нейросети, что он скопирован целиком</string>
+    <string name="ai_error_payment">На счёте у провайдера нейросети закончились деньги. Пополните баланс на его сайте</string>
+    <string name="ai_error_forbidden">С этим ключом нет доступа к нейросети. Проверьте ключ и его настройки на сайте провайдера</string>
+    <string name="ai_error_not_found">Модель не найдена у провайдера. Возможно, её переименовали: обновите приложение или выберите другого провайдера</string>
+    <string name="ai_error_timeout">Нейросеть слишком долго отвечала. Попробуйте ещё раз</string>
+    <string name="ai_error_rate_limit">Исчерпан лимит запросов к нейросети. Подождите немного или проверьте тариф у провайдера</string>
+    <string name="ai_error_server">Ошибка на стороне нейросети. Попробуйте позже</string>
+    <string name="ai_error_unavailable">Нейросеть сейчас перегружена. Попробуйте через несколько минут</string>
+    <string name="ai_error_unknown">Не удалось получить ответ нейросети (код %1$d)</string>
 </resources>
