@@ -28,10 +28,13 @@ fun aiErrorMessage(httpCode: Int?): Int = when (httpCode) {
 }
 
 @Composable
-fun aiErrorText(error: Throwable): String {
-    if (error is IllegalStateException) return stringResource(R.string.no_api_key)
-
-    val code = (error as? AiHttpException)?.code
-    val text = stringResource(aiErrorMessage(code), code ?: 0)
-    return if (code != null) "$text (HTTP $code)" else text 
+fun aiErrorText(error: Throwable): String = when (error) {
+    is AiKeyMissingException -> stringResource(R.string.no_api_key)
+    is AiResponseFormatException -> stringResource(R.string.ai_error_bad_response)
+    is AiHttpException -> {
+        val text = stringResource(aiErrorMessage(error.code), error.code)
+        "$text (HTTP ${error.code})"
+    }
+    // Ответа не было вовсе: нет сети, VPN, таймаут.
+    else -> stringResource(aiErrorMessage(null))
 }

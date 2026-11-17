@@ -19,13 +19,14 @@ MyDay — Android-приложение (Kotlin, Jetpack Compose, один мод
 ./gradlew installDebug                  # сборка и установка на подключённое устройство
 ./gradlew lintDebug                     # lint
 ./gradlew testDebugUnitTest             # unit-тесты
-./gradlew testDebugUnitTest --tests "com.notnex.myday.ExampleUnitTest"   # один тест
+./gradlew testDebugUnitTest --tests "com.notnex.myday.notification.ReminderSchedulerTest"   # один тест
 ./gradlew connectedDebugAndroidTest     # инструментальные тесты, нужно устройство
 ./gradlew signingReport                 # отпечатки ключей подписи для Firebase
 ```
 
 - `java` в `PATH` нет. Gradle берёт JDK из `JAVA_HOME=/opt/android-studio/jbr`; если переменная пуста, подставлять её перед командой.
-- Тестов по сути нет: в `test/` и `androidTest/` лежат только шаблонные примеры.
+- Unit-тесты в `test/` покрывают чистые функции: время напоминания, текст напоминания, разбор ответа нейросети, мапперы. Инструментальных тестов нет.
+- Генерация кода Room и Hilt идёт через KSP, не kapt.
 
 ## Файлы вне git
 
@@ -42,21 +43,21 @@ MyDay — Android-приложение (Kotlin, Jetpack Compose, один мод
 
 - **Room — источник правды.** Экраны читают только `Flow` из Room. Firestore получает копии изменений и присылает чужие.
 - **Запись** идёт через `MyDayRepository`: обёртка `write { }` (общий `Mutex` + `NonCancellable`) пишет в Room, затем `pushInBackground` отправляет копию в облако в `@ApplicationScope`. Экран часто закрывается сразу после нажатия «Сохранить», поэтому запись не должна зависеть от `viewModelScope`.
-- **Обратный поток** делает `SyncManager`. Он стартует в `MyDayApp.onCreate` и привязан к аккаунту, а не к экрану: при входе слушает снапшоты Firestore и сливает их в Room, при выходе или смене аккаунта очищает локальную базу.
+- **Обратный поток** делает `SyncManager`. Он стартует в `MyDayApp.onCreate` и привязан к аккаунту, а не к экрану: при входе слушает снапшоты Firestore и сливает их в Room, при выходе или смене аккаунта очищает локальную базу. Слушатели работают, только пока приложение на экране (`ProcessLifecycleOwner`): процесс будят и будильники напоминаний.
 - **Конфликты** решаются по `lastUpdated`: побеждает более поздняя запись. Первую выгрузку локальных данных `SyncManager` делает только после первого серверного снапшота, не из кэша.
 - **Структура Firestore** известна только `CloudDataSource`: `users/{uid}/days/{yyyy-MM-dd}` и `users/{uid}/schedule/{id}`.
 - **Имена полей DTO** в `data/remote/FirebaseDTO.kt` закрыты keep-правилом в `proguard-rules.pro` и совпадают с полями документов. Переименование ломает уже сохранённые данные.
 
 ### Особенности модели
 
-- У `ScheduleEntity` внешний ключ на `MyDayEntity`. Перед вставкой пункта `ensureDay` создаёт день-заглушку с `lastUpdated = 0`; такая строка в облако не выгружается и настоящий день не затирает.
-- Id пункта расписания — случайный UUID (у старых пунктов остался прежний `YYYYMMDD_HHmm`). Дублей при повторном составлении не даёт черновик на `ScheduleScreen`: в нём сохранённые пункты дня и новые от нейросети, «Сохранить» вызывает `replaceDaySchedule` — день становится ровно таким, как черновик.
+- У `ScheduleEntity` внешний ключ на `MyDayEntity`. Перед вставкой пункта `ensureDays` создаёт день-заглушку с `lastUpdated = 0`; такая строка в облако не выгружается и настоящий день не затирает.
+- Id пункта расписания — случайный UUID (у старых пунктов остался прежний `YYYYMMDD_HHmm`). Дублей при повторном составлении не даёт черновик на `ScheduleScreen`: в нём сохранённые пункты дня и новые от нейросети, «Сохранить» вызывает `replaceDaySchedule` — день становится ровно таким, как черновик: одной транзакцией Room и одной пачкой (`WriteBatch`) в облако.
 - База собирается с `fallbackToDestructiveMigration()`: при смене схемы локальные данные стираются и у вошедшего пользователя возвращаются из облака. При правке сущности поднимать `version` в `MyDayDataBase`; схемы экспортируются в `app/schemas`.
 - Новое поле проходит через четыре места: сущность, DTO, `Mappers.kt`, версия базы.
 
 ### ViewModel и навигация
 
-- Две активити со своим `NavHost`: `MainActivity` (главный экран, заметка, расписание, практика) и `ui/Settings` (настройки и вход); `MainScreen` открывает настройки через `startActivity`. Маршруты — `@Serializable`-классы в `ui/navigation/Routes.kt`.
+- Две активити со своим `NavHost`: `MainActivity` (главный экран, заметка, расписание) и `ui/Settings` (настройки и вход); `MainScreen` открывает настройки через `startActivity`. Маршруты — `@Serializable`-классы в `ui/navigation/Routes.kt`.
 - `hiltViewModel()` даёт каждому экрану свой экземпляр `MyDayViewModel`. Общего состояния между экранами через него нет: дата и id передаются аргументами маршрута, общие данные живут в репозитории-синглтоне.
 - Заметка сохраняется с задержкой 1,5 с после последнего символа, остаток дописывается в `onCleared` через `saveNoteInBackground`.
 
@@ -69,6 +70,8 @@ MyDay — Android-приложение (Kotlin, Jetpack Compose, один мод
 
 ## Стиль
 
+- Иконки — из `material-icons-core`; которых там нет, лежат в `ui/theme/AppIcons.kt`. `material-icons-extended` не подключать: раздувает debug-сборку.
+- Состояние на экранах собирать через `collectAsStateWithLifecycle`; ввод, который должен пережить поворот, держать в `rememberSaveable`.
 - Комментарии в коде на русском и объясняют причину, а не действие.
 - Строки интерфейса добавлять сразу в `res/values/strings.xml` и `res/values-ru/strings.xml`.
 - В `catch (e: Exception)` вокруг suspend-кода `CancellationException` ловится отдельно и пробрасывается дальше.

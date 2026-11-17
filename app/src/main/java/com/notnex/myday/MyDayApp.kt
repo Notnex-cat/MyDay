@@ -24,16 +24,17 @@ class MyDayApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
-            appScope.launch {
-                try {
+        // Система стирает будильники при обновлении и принудительной остановке приложения —
+        // при каждом запуске процесса ставим их заново.
+        appScope.launch {
+            try {
                 reminderScheduler.scheduleAllFromSettings()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.e("Start", "Strt of reminder and sync stopped: ${e.message}", e)
-                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("MyDayApp", "Reminders were not scheduled: ${e.message}", e)
             }
+        }
         syncManager.start()
     }
 }

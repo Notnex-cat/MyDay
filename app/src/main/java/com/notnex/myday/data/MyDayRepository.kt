@@ -15,7 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -46,13 +46,19 @@ class MyDayRepository @Inject constructor(
     private suspend fun <T> write(block: suspend () -> T): T =
         withContext(NonCancellable) { writeMutex.withLock { block() } }
 
-    fun observeDay(date: LocalDate): Flow<MyDayEntity?> = dayDao.observe(date)
+    // Room будит запрос при любой записи в таблицу, даже если этот день не менялся.
+    // distinctUntilChanged не пускает такие повторы до экрана.
+    fun observeDay(date: LocalDate): Flow<MyDayEntity?> =
+        dayDao.observe(date).distinctUntilChanged()
 
-    fun observeSchedule(date: LocalDate): Flow<List<ScheduleEntity>> = scheduleDao.observeByDate(date)
+    fun observeSchedule(date: LocalDate): Flow<List<ScheduleEntity>> =
+        scheduleDao.observeByDate(date).distinctUntilChanged()
+
+    suspend fun getDay(date: LocalDate): MyDayEntity? = dayDao.getOnce(date)
+
+    suspend fun getSchedule(date: LocalDate): List<ScheduleEntity> = scheduleDao.getByDate(date)
 
     suspend fun getScheduleItem(id: String): ScheduleEntity? = scheduleDao.getById(id)
-
-
 
     // ---------- День ----------
 
@@ -79,27 +85,50 @@ class MyDayRepository @Inject constructor(
 
     // ---------- Расписание ----------
 
-    /** Сохраняет пункты, сгенерированные нейросетью; заметки и оценки уже существующих пунктов не теряются. */
-    suspend fun addScheduleItems(date: LocalDate, items: List<ScheduleItem>) {
-        if (items.isEmpty()) return
+    /**
+     * Делает расписание дня ровно таким, как [items]: лишние пункты удаляет, новые добавляет,
+     * изменённые обновляет. Заметки и оценки уцелевших пунктов не теряются, а пункты без
+     * изменений не перезаписываются вовсе.
+     *
+     * Всё идёт одной транзакцией Room и одной пачкой в облако: день не может остаться
+     * заменённым наполовину, если приложение закроют посередине.
+     */
+    suspend fun replaceDaySchedule(date: LocalDate, items: List<ScheduleItem>) {
         val now = System.currentTimeMillis()
-        val saved = write {
+        val (changed, removedIds) = write {
             db.withTransaction {
-                ensureDay(date)
-                items.map { item ->
-                    val existing = scheduleDao.getById(item.id)
-                    (existing ?: ScheduleEntity(
-                        id = item.id,
-                        scheduleDate = date,
-                        time = item.time,
-                        scheduleItem = item.task
-                    ))
-                        .copy(time = item.time, scheduleItem = item.task, lastUpdated = now)
-                        .also { scheduleDao.upsert(it) }
+                val current = scheduleDao.getByDate(date).associateBy { it.id }
+                val keepIds = items.mapTo(HashSet()) { it.id }
+                val removed = current.keys.filter { it !in keepIds }
+
+                val changed = items.mapNotNull { item ->
+                    val existing = current[item.id]
+                    when {
+                        existing == null -> ScheduleEntity(
+                            id = item.id,
+                            scheduleDate = date,
+                            time = item.time,
+                            scheduleItem = item.task,
+                            lastUpdated = now
+                        )
+                        existing.time != item.time || existing.scheduleItem != item.task ->
+                            existing.copy(time = item.time, scheduleItem = item.task, lastUpdated = now)
+                        else -> null
+                    }
                 }
+
+                if (removed.isNotEmpty()) scheduleDao.deleteByIds(removed)
+                if (changed.isNotEmpty()) {
+                    ensureDays(listOf(date))
+                    scheduleDao.upsertAll(changed)
+                }
+                changed to removed
             }
         }
-        pushInBackground { uid -> saved.forEach { cloud.setSchedule(uid, it.toDto()) } }
+        if (changed.isEmpty() && removedIds.isEmpty()) return
+        pushInBackground { uid ->
+            cloud.applyScheduleChanges(uid, changed.map { it.toDto() }, removedIds)
+        }
     }
 
     suspend fun updateScheduleItem(id: String, title: String, time: LocalTime, note: String) {
@@ -112,16 +141,14 @@ class MyDayRepository @Inject constructor(
     }
 
     suspend fun deleteScheduleItem(id: String) {
-        write { scheduleDao.deleteById(id) }
+        write { scheduleDao.deleteByIds(listOf(id)) }
         pushInBackground { uid -> cloud.deleteSchedule(uid, id) }
     }
 
     // Родительская строка дня нужна из-за внешнего ключа. Это локальная заглушка с lastUpdated = 0:
     // она не затирает настоящий день из облака и не выгружается в Firestore.
-    private suspend fun ensureDay(date: LocalDate) {
-        if (dayDao.getOnce(date) == null) {
-            dayDao.upsert(MyDayEntity(date = date, lastUpdated = 0L))
-        }
+    private suspend fun ensureDays(dates: Collection<LocalDate>) {
+        dayDao.insertIfAbsent(dates.distinct().map { MyDayEntity(date = it, lastUpdated = 0L) })
     }
 
     // ---------- Синхронизация (используется SyncManager) ----------
@@ -130,31 +157,52 @@ class MyDayRepository @Inject constructor(
 
     suspend fun getAllSchedule(): List<ScheduleEntity> = scheduleDao.getAll()
 
+    // Пачка из облака сливается одной транзакцией: при первом входе это сотни дней, и запись
+    // по одному будила бы экраны сотни раз. Локальные версии читаются одним запросом на пачку.
     suspend fun mergeRemoteDays(remote: List<MyDayFirebaseDTO>) {
+        val entities = remote.mapNotNull { it.toEntityOrNull() }
+        if (entities.isEmpty()) return
         writeMutex.withLock {
-            for (entity in remote.mapNotNull { it.toEntityOrNull() }) {
-                val local = dayDao.getOnce(entity.date)
-                if (local == null || entity.lastUpdated > local.lastUpdated) dayDao.upsert(entity)
+            db.withTransaction {
+                val local = entities.map { it.date }
+                    .chunked(SQL_CHUNK)
+                    .flatMap { dayDao.getByDates(it) }
+                    .associateBy { it.date }
+                val newer = entities.filter { remoteDay ->
+                    local[remoteDay.date]?.let { remoteDay.lastUpdated > it.lastUpdated } ?: true
+                }
+                if (newer.isNotEmpty()) dayDao.upsertAll(newer)
             }
         }
     }
 
     suspend fun mergeRemoteSchedule(remote: List<MyScheduleFirebaseDTO>) {
+        val entities = remote.mapNotNull { it.toEntityOrNull() }
+        if (entities.isEmpty()) return
         writeMutex.withLock {
             db.withTransaction {
-                for (entity in remote.mapNotNull { it.toEntityOrNull() }) {
-                    val local = scheduleDao.getById(entity.id)
-                    if (local == null || entity.lastUpdated > local.lastUpdated) {
-                        ensureDay(entity.scheduleDate)
-                        scheduleDao.upsert(entity)
-                    }
+                val local = entities.map { it.id }
+                    .chunked(SQL_CHUNK)
+                    .flatMap { scheduleDao.getByIds(it) }
+                    .associateBy { it.id }
+                val newer = entities.filter { remoteItem ->
+                    local[remoteItem.id]?.let { remoteItem.lastUpdated > it.lastUpdated } ?: true
+                }
+                if (newer.isNotEmpty()) {
+                    ensureDays(newer.map { it.scheduleDate })
+                    scheduleDao.upsertAll(newer)
                 }
             }
         }
     }
 
     suspend fun removeRemoteSchedule(ids: List<String>) {
-        writeMutex.withLock { ids.forEach { scheduleDao.deleteById(it) } }
+        if (ids.isEmpty()) return
+        writeMutex.withLock {
+            db.withTransaction {
+                ids.chunked(SQL_CHUNK).forEach { scheduleDao.deleteByIds(it) }
+            }
+        }
     }
 
     /** При выходе из аккаунта локальные данные не должны утечь в облако следующего пользователя. */
@@ -179,19 +227,10 @@ class MyDayRepository @Inject constructor(
         }
     }
 
-    // Экран закрывается сразу после «Сохранить», и viewModelScope отменяется. NonCancellable
-    // доводит до конца всю замену, а не только отдельные записи внутри write.
-    suspend fun replaceDaySchedule(date: LocalDate, items: List<ScheduleItem>) = withContext(NonCancellable) {
-        val keepIds = items.map { it.id }.toSet()
-        val saved = observeSchedule(date).first()
-
-        saved.filter { it.id !in keepIds }
-            .forEach { deleteScheduleItem(it.id) }
-
-        addScheduleItems(date, items)
-    }
-
     private companion object {
         const val TAG = "MyDayRepository"
+
+        // SQLite до Android 11 принимает не больше 999 параметров в одном запросе.
+        const val SQL_CHUNK = 500
     }
 }

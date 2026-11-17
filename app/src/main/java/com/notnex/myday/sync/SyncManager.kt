@@ -1,6 +1,8 @@
 package com.notnex.myday.sync
 
 import android.util.Log
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.notnex.myday.auth.AuthRepository
 import com.notnex.myday.data.MyDayRepository
 import com.notnex.myday.data.remote.CloudDataSource
@@ -9,7 +11,9 @@ import com.notnex.myday.di.ApplicationScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -20,6 +24,10 @@ import javax.inject.Singleton
  * Жизненный цикл синхронизации, привязанный к аккаунту (а не к какому-либо экрану):
  *  - вход: подписываемся на облако, слияние по lastUpdated в обе стороны;
  *  - выход или смена аккаунта: чистим локальную БД, чтобы данные не перетекли к другому пользователю.
+ *
+ * Слушатели облака работают, только пока приложение на экране. Процесс будят и будильники
+ * напоминаний, и ради одного уведомления держать соединение с Firestore незачем. Собственные
+ * записи от этого не страдают: их отправляет MyDayRepository через оффлайн-очередь Firestore.
  */
 @Singleton
 class SyncManager @Inject constructor(
@@ -31,18 +39,29 @@ class SyncManager @Inject constructor(
     fun start() {
         scope.launch {
             var previousUid: String? = null
-            auth.authState
-                .map { it.user?.userId }
+            val uid = auth.authState.map { it.user?.userId }.distinctUntilChanged()
+            combine(uid, appInForeground()) { currentUid, inForeground -> currentUid to inForeground }
                 .distinctUntilChanged()
-                .collectLatest { uid ->
-                    if (previousUid != null && previousUid != uid) repository.clearLocal()
-                    previousUid = uid
-                    if (uid != null) runSync(uid)
+                // collectLatest сначала отменяет прежнюю синхронизацию и только потом запускает блок:
+                // база чистится, когда слушатели старого аккаунта уже сняты.
+                .collectLatest { (currentUid, inForeground) ->
+                    // Очистка не зависит от видимости: выйти из аккаунта можно и в фоне.
+                    if (previousUid != null && previousUid != currentUid) repository.clearLocal()
+                    previousUid = currentUid
+                    if (currentUid != null && inForeground) runSync(currentUid)
                 }
         }
     }
 
-    // Живёт, пока пользователь вошёл: collectLatest отменит его при выходе или смене аккаунта.
+    // true, пока на экране хотя бы одна активити. ProcessLifecycleOwner сообщает об уходе в фон
+    // с задержкой 700 мс, поэтому поворот экрана и переход между активити синхронизацию не рвут.
+    private fun appInForeground(): Flow<Boolean> =
+        ProcessLifecycleOwner.get().lifecycle.currentStateFlow
+            .map { it.isAtLeast(Lifecycle.State.STARTED) }
+            .distinctUntilChanged()
+
+    // Живёт, пока пользователь вошёл и приложение на экране: collectLatest отменит его
+    // при выходе, смене аккаунта или уходе в фон.
     private suspend fun runSync(uid: String) = coroutineScope {
         launch { guarded("days") { syncDays(uid) } }
         launch { guarded("schedule") { syncSchedule(uid) } }
@@ -61,7 +80,9 @@ class SyncManager @Inject constructor(
                 val toUpload = repository.getAllDays()
                     .filter { it.lastUpdated > 0L } // lastUpdated == 0 — локальная заглушка
                     .filter { local -> remote[local.date.toString()]?.let { local.lastUpdated > it.lastUpdated } ?: true }
-                launch { toUpload.forEach { cloud.setDay(uid, it.toDto()) } }
+                if (toUpload.isNotEmpty()) {
+                    launch { cloud.setDays(uid, toUpload.map { it.toDto() }) }
+                }
             }
         }
     }
@@ -76,7 +97,9 @@ class SyncManager @Inject constructor(
                 val remote = changes.all.associateBy { it.id }
                 val toUpload = repository.getAllSchedule()
                     .filter { local -> remote[local.id]?.let { local.lastUpdated > it.lastUpdated } ?: true }
-                launch { toUpload.forEach { cloud.setSchedule(uid, it.toDto()) } }
+                if (toUpload.isNotEmpty()) {
+                    launch { cloud.setSchedules(uid, toUpload.map { it.toDto() }) }
+                }
             }
         }
     }

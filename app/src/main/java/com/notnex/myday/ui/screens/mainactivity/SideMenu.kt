@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Abc
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.HorizontalDivider
@@ -27,7 +26,6 @@ import com.notnex.myday.ui.theme.MyDayTheme
 fun SideMenu(
     drawerState: DrawerState,
     onOpenSettings: () -> Unit,
-    onOpenPractice: () -> Unit,
     content: @Composable () -> Unit
 ) {
     ModalNavigationDrawer(
@@ -52,13 +50,6 @@ fun SideMenu(
                         selected = false,
                         icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
                         onClick = onOpenSettings
-                    )
-                    Spacer(Modifier.height(MyDayTheme.spacing.xs))
-                    NavigationDrawerItem(
-                        label = { Text(stringResource(R.string.practice))},
-                        selected = false,
-                        icon = { Icon(Icons.Outlined.Abc, contentDescription = null) },
-                        onClick = onOpenPractice
                     )
                 }
             }

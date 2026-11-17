@@ -6,6 +6,7 @@ import android.content.Intent
 import android.util.Log
 import com.notnex.myday.di.ApplicationScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -31,6 +32,8 @@ class BootReceiver: BroadcastReceiver() {
         appScope.launch {
             try {
                 reminderScheduler.scheduleAllFromSettings()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w("BootReceiver", "Reminder setting failed: ${e.message}", e)
             } finally {

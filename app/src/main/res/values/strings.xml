@@ -2,7 +2,6 @@
     <string name="app_name" translatable="false">MyDay</string>
     <string name="write_something">Write something…</string>
     <string name="settings">Settings</string>
-    <string name="practice">Practice</string>
     <string name="web_client_id" translatable="false">172863394381-3id6gai97sble36i8rr1582mk65oufkm.apps.googleusercontent.com</string>
     <string name="sign_in">Sign In</string>
     <string name="sign_out">Sign Out</string>
@@ -29,9 +28,7 @@
     <string name="describe_your_day_title">Describe your day</string>
     <string name="get_schedule">Get schedule</string>
     <string name="ask_ai">Ask</string>
-    <string name="error_with_message">Error: %1$s</string>
     <string name="notification_channel_name">Reminder</string>
-    <string name="set_reminder">Set reminder</string>
     <string name="how_day_gone">How was your day?</string>
     <string name="tell_how_day_gone">Write a few words about your day</string>
     <string name="day_score">Rate your day</string>
@@ -57,4 +54,9 @@
     <string name="ai_error_server">Something went wrong on the AI\'s side. Please try again later</string>
     <string name="ai_error_unavailable">The AI is overloaded right now. Try again in a few minutes</string>
     <string name="ai_error_unknown">Couldn\'t get a response from the AI (code %1$d)</string>
+    <string name="ai_error_bad_response">The AI replied in an unexpected format. Please try again</string>
+    <string name="ai_disabled_hint">AI is turned off. Turn it on in settings to get schedule suggestions</string>
+    <string name="set_time">Set time</string>
+    <string name="set">Set</string>
+    <string name="google_sign_in_error">Google sign-in failed. Check that a Google account is added on this device</string>
 </resources>

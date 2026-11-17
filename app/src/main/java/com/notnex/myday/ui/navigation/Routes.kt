@@ -26,9 +26,6 @@ data object SettingsRoute
 @Serializable
 data object AiSettingsRoute
 
-@Serializable
-data object PracticeRoute
-
 
 @Serializable
 data object AuthRoute

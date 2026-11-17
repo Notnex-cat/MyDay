@@ -1,12 +1,6 @@
 package com.notnex.myday.ui.screens.mainactivity
 
-import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Intent
-import android.os.Build
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -16,7 +10,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,15 +33,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -56,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
@@ -63,17 +53,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthViewModel
 import com.notnex.myday.data.NOT_RATED
+import com.notnex.myday.data.ScheduleEntity
 import com.notnex.myday.data.TIME_FORMAT
 import com.notnex.myday.data.isRated
 import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
-import com.notnex.myday.ui.navigation.EditScheduleRoute
 import com.notnex.myday.ui.Settings
-import com.notnex.myday.ui.navigation.PracticeRoute
+import com.notnex.myday.ui.navigation.EditScheduleRoute
 import com.notnex.myday.ui.navigation.toDayNoteRoute
 import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.ui.theme.RatingBar
@@ -81,255 +72,273 @@ import com.notnex.myday.viewmodel.MyDayViewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
 import java.time.temporal.WeekFields
-import java.util.Locale
 
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+// Полоса недель: 5 недель назад, текущая и 4 вперёд.
+private const val WEEKS_BACK = 5
+private const val WEEK_PAGES = 10
+
+/**
+ * Главный экран собран из небольших функций. Состояние читается здесь, а вниз уходят
+ * готовые значения и лямбды: когда меняется расписание, Compose перерисовывает только
+ * список, а не полосу недель и шапку.
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SharedTransitionScope.MainScreen(
     navController: NavController,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    myDayViewModel: MyDayViewModel = hiltViewModel()
+    myDayViewModel: MyDayViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            // Permission granted, you can now send notifications.
-        } else {
-            Toast.makeText(context, "Notifications permission denied", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    LaunchedEffect(Unit){
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-
-    val authViewModel: AuthViewModel = hiltViewModel()
-    val weekOffsets = rememberPagerState(5, 0f) { 10 }
-
-    val selectedDate by myDayViewModel.selectedDate.collectAsState()
-
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-    val dayOfWeekFormatter = DateTimeFormatter.ofPattern("E", Locale.getDefault()) // "Пн"
-    val dayOfMonthFormatter = DateTimeFormatter.ofPattern("d") // "26"
+    val selectedDate by myDayViewModel.selectedDate.collectAsStateWithLifecycle()
+    val day by myDayViewModel.selectedDay.collectAsStateWithLifecycle()
+    val schedule by myDayViewModel.selectedSchedule.collectAsStateWithLifecycle()
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
 
-    val state by authViewModel.authState.collectAsState()
+    val openSettings = { context.startActivity(Intent(context, Settings::class.java)) }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+    SideMenu(
+        drawerState = drawerState,
+        onOpenSettings = {
+            scope.launch { drawerState.close() }
+            openSettings()
+        },
     ) {
-        SideMenu(
-            drawerState = drawerState,
-            onOpenSettings = {
-                scope.launch { drawerState.close() }
-                context.startActivity(Intent(context, Settings::class.java))
+        Scaffold(
+            topBar = {
+                MainTopBar(
+                    avatarUrl = authState.user?.profilePictureUrl,
+                    onMenuClick = {
+                        scope.launch {
+                            if (drawerState.isClosed) drawerState.open() else drawerState.close()
+                        }
+                    },
+                    onAccountClick = openSettings,
+                )
             },
-            onOpenPractice = {
-                scope.launch { drawerState.close() }
-                navController.navigate(PracticeRoute)
+            floatingActionButton = {
+                CustomFloatingActionButton(
+                    navController = navController,
+                    selectedDate = selectedDate,
+                    fabIcon = Icons.Default.Add
+                )
             }
-        ) // боковое меню в другом файле
-        {
-            Scaffold(
-                topBar = {
-                    CenterAlignedTopAppBar(
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background
-                        ),
-                        title = { // надпись с названием приложения по середине
-                            Text(
-                                text = stringResource(R.string.app_name),
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                        },
-                        navigationIcon = { // кнопка сендвич для бокового меню
-                            IconButton(onClick = {
-                                scope.launch {
-                                    if (drawerState.isClosed) {
-                                        drawerState.open()
-                                    } else {
-                                        drawerState.close()
-                                    }
-                                }
-                            }) {
-                                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu))
-                            }
-                        },
-                        actions = { // кнопка аккаунт
-                            IconButton(onClick = { context.startActivity(Intent(context, Settings::class.java)) }) {
-                                val avatarUrl = state.user?.profilePictureUrl
+        ) { innerPadding ->
+            Column(modifier = Modifier.padding(innerPadding)) {
+                WeekStrip(
+                    selectedDate = selectedDate,
+                    onDateSelected = myDayViewModel::setSelectedDate,
+                )
 
-                                if (avatarUrl != null) {
-                                    key(avatarUrl) { // Добавляем key для пересоздания при смене URL
-                                        AsyncImage(
-                                            model = avatarUrl, // Упрощаем без ImageRequest.Builder
-                                            contentDescription = stringResource(R.string.profile_picture),
-                                            modifier = Modifier
-                                                .size(30.dp)
-                                                .clip(CircleShape),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Outlined.AccountCircle,
-                                        contentDescription = stringResource(R.string.profile_picture),
-                                        modifier = Modifier.size(30.dp)
-                                    )
-                                }
-                            }
-                        }
-                    )
-                },
-                floatingActionButton = { //кнопка снизу
-                    CustomFloatingActionButton(
-                        navController = navController,
-                        selectedDate = selectedDate,
-                        fabIcon = Icons.Default.Add
+                val note = day?.note.orEmpty()
+                ElevatedCard( // текст о дне
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.onTertiary
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(MyDayTheme.spacing.md)
+                        .sharedBounds(
+                            sharedContentState = rememberSharedContentState(
+                                key = CARD_EXPLODE_BOUNDS_KEY
+                            ),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
+                        .clickable { navController.navigate(selectedDate.toDayNoteRoute()) }
+                ) {
+                    Text(
+                        text = note.ifEmpty { stringResource(R.string.write_something) },
+                        color = if (note.isEmpty()) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(MyDayTheme.spacing.md),
+                        maxLines = 10
                     )
                 }
-            ) { innerPadding ->
-                Column {
-                    HorizontalPager(
-                        state = weekOffsets,
-                        modifier = Modifier.padding(innerPadding)
-                    ) { page ->
 
-                        val startOfWeek = LocalDate.now().minusWeeks(5)
-                            .with(WeekFields.of(Locale.getDefault()).firstDayOfWeek)
-                            .plusWeeks(page.toLong())
+                DayRating(
+                    rating = day?.score ?: NOT_RATED,
+                    onRatingChanged = { myDayViewModel.setRating(selectedDate, it) },
+                )
 
-                        val weekDates = (0..6).map { startOfWeek.plusDays(it.toLong()) }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            weekDates.forEach { date ->
-                                val isSelected =
-                                    date == selectedDate // это такие сложные условия оба
-                                val isToday = date == LocalDate.now() //
+                ScheduleList(
+                    schedule = schedule,
+                    onItemClick = { navController.navigate(EditScheduleRoute(it.id)) },
+                )
+            }
+        }
+    }
+}
 
-                                Column(
-                                    modifier = Modifier
-                                        .padding(MyDayTheme.spacing.xxs)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(
-                                            if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                                            else if (isToday) MaterialTheme.colorScheme.secondaryContainer
-                                            else Color.Transparent
-                                        )
-                                        .clickable { myDayViewModel.setSelectedDate(date) }
-                                        .padding(vertical = MyDayTheme.spacing.xs, horizontal = MyDayTheme.spacing.sm),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                ) {
-                                    Text(
-                                        text = date.format(dayOfWeekFormatter),
-                                        fontSize = 12.sp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary
-                                    )
-                                    Text(
-                                        text = date.format(dayOfMonthFormatter),
-                                        fontSize = 16.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    val day by remember(selectedDate) { myDayViewModel.observeDay(selectedDate) }
-                        .collectAsState(initial = null)
-
-                    val currentRating = day?.score ?: NOT_RATED
-                    val text = day?.note ?: ""
-
-                    Column {
-                        ElevatedCard( // текст о дне
-                            elevation = CardDefaults.cardElevation(
-                                defaultElevation = 2.dp
-                            ),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.onTertiary
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(MyDayTheme.spacing.md)
-                                .sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = CARD_EXPLODE_BOUNDS_KEY
-                                    ),
-                                    animatedVisibilityScope = animatedVisibilityScope
-                                )
-                                .clickable {
-                                    navController.navigate(selectedDate.toDayNoteRoute())
-                                }
-
-                        ) {
-                            Text(
-                                text = text.ifEmpty { stringResource(R.string.write_something) },
-                                color = if (text.isEmpty()) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.padding(MyDayTheme.spacing.md),
-                                maxLines = 10
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .padding(MyDayTheme.spacing.md)
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            RatingBar( // рейтинг дня
-                                modifier = Modifier
-                                    .size(50.dp),
-                                rating = currentRating,
-                                onRatingChanged = { newRating ->
-                                    myDayViewModel.setRating(selectedDate, newRating)
-                                },
-                                starsColor = when {
-                                    !currentRating.isRated -> MaterialTheme.colorScheme.outline
-                                    currentRating >= 4.0 -> Color.Green
-                                    currentRating >= 2.5 -> colorResource(R.color.orange)
-                                    else -> Color.Red
-                                }
-                            )
-                        }
-
-                        val fullSchedule by remember(selectedDate) { myDayViewModel.observeSchedule(selectedDate) }
-                            .collectAsState(initial = emptyList())
-
-                        LazyColumn {
-                            items(
-                                items = fullSchedule,
-                                key = { item -> item.id }
-                            ) { item ->
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(MyDayTheme.spacing.xxs)
-                                        .clickable {
-                                            navController.navigate(EditScheduleRoute(item.id))
-                                        }
-                                ) {
-                                    Text(
-                                        text = "${item.time.format(TIME_FORMAT)} — ${item.scheduleItem}",
-                                        modifier = Modifier.padding(MyDayTheme.spacing.md)
-                                    )
-                                }
-                            }
-                        }
-                    }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MainTopBar(
+    avatarUrl: String?,
+    onMenuClick: () -> Unit,
+    onAccountClick: () -> Unit,
+) {
+    CenterAlignedTopAppBar(
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background
+        ),
+        title = {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        navigationIcon = { // кнопка бокового меню
+            IconButton(onClick = onMenuClick) {
+                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu))
+            }
+        },
+        actions = { // аккаунт: фото профиля или значок-заглушка
+            IconButton(onClick = onAccountClick) {
+                if (avatarUrl != null) {
+                    AsyncImage(
+                        model = avatarUrl,
+                        contentDescription = stringResource(R.string.profile_picture),
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Outlined.AccountCircle,
+                        contentDescription = stringResource(R.string.profile_picture),
+                        modifier = Modifier.size(30.dp)
+                    )
                 }
+            }
+        }
+    )
+}
+
+/** Листаемая полоса недель; нажатие на день выбирает его. */
+@Composable
+private fun WeekStrip(
+    selectedDate: LocalDate,
+    onDateSelected: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val pagerState = rememberPagerState(initialPage = WEEKS_BACK) { WEEK_PAGES }
+    val locale = LocalConfiguration.current.locales[0]
+    val today = LocalDate.now()
+
+    // Форматтеры и начало первой недели считаются один раз, а не при каждой перерисовке.
+    val dayOfWeekFormatter = remember(locale) { DateTimeFormatter.ofPattern("E", locale) } // «Пн»
+    val dayOfMonthFormatter = remember(locale) { DateTimeFormatter.ofPattern("d", locale) } // «26»
+    val firstWeekStart = remember(today, locale) {
+        // previousOrSame верен и там, где неделя начинается с воскресенья.
+        today.with(TemporalAdjusters.previousOrSame(WeekFields.of(locale).firstDayOfWeek))
+            .minusWeeks(WEEKS_BACK.toLong())
+    }
+
+    HorizontalPager(state = pagerState, modifier = modifier) { page ->
+        val weekStart = firstWeekStart.plusWeeks(page.toLong())
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            for (offset in 0L..6L) {
+                val date = weekStart.plusDays(offset)
+                DayCell(
+                    dayOfWeek = date.format(dayOfWeekFormatter),
+                    dayOfMonth = date.format(dayOfMonthFormatter),
+                    isSelected = date == selectedDate,
+                    isToday = date == today,
+                    onClick = { onDateSelected(date) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DayCell(
+    dayOfWeek: String,
+    dayOfMonth: String,
+    isSelected: Boolean,
+    isToday: Boolean,
+    onClick: () -> Unit,
+) {
+    val textColor =
+        if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary
+    Column(
+        modifier = Modifier
+            .padding(MyDayTheme.spacing.xxs)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                when {
+                    isSelected -> MaterialTheme.colorScheme.primaryContainer
+                    isToday -> MaterialTheme.colorScheme.secondaryContainer
+                    else -> Color.Transparent
+                }
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = MyDayTheme.spacing.xs, horizontal = MyDayTheme.spacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(text = dayOfWeek, fontSize = 12.sp, color = textColor)
+        Text(
+            text = dayOfMonth,
+            fontSize = 16.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = textColor
+        )
+    }
+}
+
+@Composable
+private fun DayRating(
+    rating: Double,
+    onRatingChanged: (Double) -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .padding(MyDayTheme.spacing.md)
+            .fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        RatingBar(
+            modifier = Modifier.size(50.dp),
+            rating = rating,
+            onRatingChanged = onRatingChanged,
+            starsColor = when {
+                !rating.isRated -> MaterialTheme.colorScheme.outline
+                rating >= 4.0 -> Color.Green
+                rating >= 2.5 -> colorResource(R.color.orange)
+                else -> Color.Red
+            }
+        )
+    }
+}
+
+@Composable
+private fun ScheduleList(
+    schedule: List<ScheduleEntity>,
+    onItemClick: (ScheduleEntity) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(modifier = modifier) {
+        items(items = schedule, key = { it.id }) { item ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(MyDayTheme.spacing.xxs)
+                    .clickable { onItemClick(item) }
+            ) {
+                Text(
+                    text = "${item.time.format(TIME_FORMAT)} — ${item.scheduleItem}",
+                    modifier = Modifier.padding(MyDayTheme.spacing.md)
+                )
             }
         }
     }

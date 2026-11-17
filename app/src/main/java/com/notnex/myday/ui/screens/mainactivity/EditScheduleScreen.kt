@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -37,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.notnex.myday.R
 import com.notnex.myday.data.TIME_FORMAT
+import com.notnex.myday.ui.theme.AppIcons
 import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.MyDayViewModel
 import java.time.LocalTime
@@ -48,13 +49,16 @@ fun EditScheduleScreen(
     id: String,
     myDayViewModel: MyDayViewModel = hiltViewModel()
 ) {
-    var title by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
-    var time by remember { mutableStateOf(LocalTime.of(8, 0)) }
-    var isLoaded by remember { mutableStateOf(false) }
+    // rememberSaveable: правки в полях переживают поворот экрана. isLoaded сохраняется вместе
+    // с ними, иначе после поворота поля заново заполнились бы значениями из базы.
+    var title by rememberSaveable { mutableStateOf("") }
+    var note by rememberSaveable { mutableStateOf("") }
+    var time by rememberSaveable { mutableStateOf(LocalTime.of(8, 0)) }
+    var isLoaded by rememberSaveable { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(id) {
+        if (isLoaded) return@LaunchedEffect
         val item = myDayViewModel.getScheduleItem(id)
         if (item == null) {
             // Пункт удалён (например, с другого устройства) — редактировать нечего
@@ -84,10 +88,13 @@ fun EditScheduleScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        myDayViewModel.deleteScheduleItem(id)
-                        navController.popBackStack()
-                    }) {
+                    IconButton(
+                        enabled = isLoaded,
+                        onClick = {
+                            myDayViewModel.deleteScheduleItem(id)
+                            navController.popBackStack()
+                        }
+                    ) {
                         Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
                     }
                     IconButton(
@@ -120,7 +127,7 @@ fun EditScheduleScreen(
                 onClick = { showTimePicker = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.Schedule, contentDescription = null)
+                Icon(AppIcons.Schedule, contentDescription = null)
                 Text(
                     text = stringResource(R.string.schedule_item_time, time.format(TIME_FORMAT)),
                     modifier = Modifier.padding(start = MyDayTheme.spacing.xs)

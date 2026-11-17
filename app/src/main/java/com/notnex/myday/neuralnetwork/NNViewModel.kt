@@ -3,21 +3,29 @@ package com.notnex.myday.neuralnetwork
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.notnex.myday.data.AiSettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
 class NNViewModel @Inject constructor(
-    private val aiRepository: AiRepository
+    private val aiRepository: AiRepository,
+    aiSettingsRepository: AiSettingsRepository,
 ) : ViewModel() {
+
+    /** Включена ли нейросеть в настройках; null — настройка ещё не прочитана. */
+    val aiEnabled: StateFlow<Boolean?> = aiSettingsRepository.aiEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), null)
 
     private val _scheduleState = MutableStateFlow<NNResult<List<ScheduleItem>>>(NNResult.Idle)
     val scheduleState: StateFlow<NNResult<List<ScheduleItem>>> = _scheduleState.asStateFlow()
@@ -45,6 +53,14 @@ class NNViewModel @Inject constructor(
                 NNResult.Error(e)
             }
         }
+    }
+
+    /**
+     * Экран забрал готовое расписание в черновик. Без сброса результат применился бы повторно
+     * после поворота экрана: состояние ViewModel переживает поворот.
+     */
+    fun scheduleConsumed() {
+        if (_scheduleState.value is NNResult.Success) _scheduleState.value = NNResult.Idle
     }
 
     /** @param onComplete вызывается один раз с полным текстом, когда стрим успешно завершился. */

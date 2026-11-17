@@ -8,8 +8,8 @@ import com.notnex.myday.R
 import com.notnex.myday.data.MyDayRepository
 import com.notnex.myday.di.ApplicationScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
@@ -44,12 +44,14 @@ class ReminderReceiver : BroadcastReceiver() {
                 reminderScheduler.scheduleFromSettings(type)
 
                 val message = when (type){
-                    ReminderType.DAY_NOTE -> reminderMessage(myDayRepository.observeDay(LocalDate.now()).first())
+                    ReminderType.DAY_NOTE -> reminderMessage(myDayRepository.getDay(LocalDate.now()))
                     ReminderType.BEDTIME -> R.string.time_to_sleep_message
                 }
                 if (message != null) {
                     notifier.show(message, type)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w("ReminderReceiver", "Reminder setting failed: ${e.message}", e)
             } finally {

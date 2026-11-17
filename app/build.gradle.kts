@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android)
-    id("kotlin-kapt")
+    alias(libs.plugins.ksp)
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.kotlin.serialization)
 }
@@ -23,9 +23,19 @@ android {
     }
 
 
-    kapt {
-        arguments {
-            arg("room.schemaLocation", "$projectDir/schemas")
+    // В приложении два языка. Без фильтра в сборку попадают переводы библиотек на сотню языков.
+    androidResources {
+        localeFilters += listOf("en", "ru")
+    }
+
+    // Исходники .proto и тексты лицензий библиотек в работе приложения не участвуют.
+    packaging {
+        resources {
+            excludes += setOf(
+                "**/*.proto",
+                "META-INF/**/LICENSE.txt",
+                "META-INF/{AL2.0,LGPL2.1}",
+            )
         }
     }
 
@@ -55,27 +65,36 @@ android {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    // collectAsStateWithLifecycle: поток не собирается, пока экран не виден
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    // ProcessLifecycleOwner: синхронизация идёт, только пока приложение на экране
+    implementation(libs.androidx.lifecycle.process)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.androidx.activity)
+    implementation(libs.androidx.animation)
+    // Только базовый набор иконок; недостающие шесть лежат в ui/theme/AppIcons.kt.
+    // Полный набор (icons-extended) раздувал debug-сборку на десятки мегабайт.
+    implementation(libs.androidx.material.icons.core)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.animation)
 
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    kapt(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
 
     // настройки пользователя: ключ — значение
     implementation(libs.androidx.datastore.preferences)
@@ -85,16 +104,13 @@ dependencies {
 
     // Hilt
     implementation(libs.hilt.android)
-    kapt(libs.hilt.android.compiler)
+    ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.material.icons.extended)
-
     //firebase
-    implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.auth)
     implementation(libs.play.services.auth)
-    implementation(libs.firebase.firestore.ktx)
+    implementation(libs.firebase.firestore)
 
     //coil
     implementation(libs.coil.compose)
@@ -103,4 +119,6 @@ dependencies {
     implementation(libs.okhttp)
 
     implementation(libs.kotlinx.serialization.json)
+
+    testImplementation(libs.junit)
 }

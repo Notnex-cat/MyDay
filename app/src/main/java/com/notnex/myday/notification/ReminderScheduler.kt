@@ -38,7 +38,7 @@ class ReminderScheduler @Inject constructor(
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         alarmManager.setWindow(
             AlarmManager.RTC_WAKEUP,
-            getTime(reminderTime, localTimeAndDate) + System.currentTimeMillis(),
+            millisUntil(reminderTime, localTimeAndDate) + System.currentTimeMillis(),
             600000,
             reminderPendingIntent(type)
         )
@@ -47,19 +47,6 @@ class ReminderScheduler @Inject constructor(
     fun cancelReminder(type: ReminderType){
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         alarmManager.cancel(reminderPendingIntent(type))
-    }
-
-    // Через сколько миллисекунд наступит time по местным часам. Если сегодня это время уже было
-    // или наступает прямо сейчас — завтра: так сработавший в 21:00 будильник ставит следующий
-    // на завтра, а не на ту же минуту. Секунды отброшены, сдвиг не больше минуты.
-    fun getTime(time: LocalTime, localDateTime: LocalDateTime): Long{
-        val currentTime = localDateTime.hour * 3600000L + localDateTime.minute * 60000L
-        val reminderTime = time.hour * 3600000L + time.minute * 60000L
-        return if (reminderTime > currentTime){
-            reminderTime - currentTime
-        } else{
-            reminderTime - currentTime + 86400000L
-        }
     }
 
     // Время и флаг берутся из DataStore — других мест, где они хранятся, нет. Выключенное
@@ -75,5 +62,19 @@ class ReminderScheduler @Inject constructor(
         for (type in ReminderType.entries){
             scheduleFromSettings(type)
         }
+    }
+}
+
+// Через сколько миллисекунд наступит time по местным часам. Если сегодня это время уже было
+// или наступает прямо сейчас — завтра: так сработавший в 21:00 будильник ставит следующий
+// на завтра, а не на ту же минуту. Секунды отброшены, сдвиг не больше минуты.
+// Функция вне класса и без Context — её проверяет ReminderSchedulerTest.
+internal fun millisUntil(time: LocalTime, now: LocalDateTime): Long {
+    val currentTime = now.hour * 3600000L + now.minute * 60000L
+    val reminderTime = time.hour * 3600000L + time.minute * 60000L
+    return if (reminderTime > currentTime) {
+        reminderTime - currentTime
+    } else {
+        reminderTime - currentTime + 86400000L
     }
 }

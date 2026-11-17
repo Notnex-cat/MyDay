@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings">Настройки</string>
-    <string name="practice">Практика</string>
     <string name="write_something">Напишите что-нибудь…</string>
     <string name="sign_in">Войти в аккаунт</string>
     <string name="sign_out">Выйти из аккаунта</string>
@@ -28,9 +27,7 @@
     <string name="describe_your_day_title">Опишите свой день</string>
     <string name="get_schedule">Получить расписание</string>
     <string name="ask_ai">Спросить</string>
-    <string name="error_with_message">Ошибка: %1$s</string>
     <string name="notification_channel_name">Напоминание</string>
-    <string name="set_reminder">Установить напоминание</string>
     <string name="how_day_gone">Как прошёл день?</string>
     <string name="tell_how_day_gone">Расскажите, как прошёл день</string>
     <string name="day_score">Оцените день</string>
@@ -56,4 +53,9 @@
     <string name="ai_error_server">Ошибка на стороне нейросети. Попробуйте позже</string>
     <string name="ai_error_unavailable">Нейросеть сейчас перегружена. Попробуйте через несколько минут</string>
     <string name="ai_error_unknown">Не удалось получить ответ нейросети (код %1$d)</string>
+    <string name="ai_error_bad_response">Нейросеть ответила в непонятном виде. Попробуйте ещё раз</string>
+    <string name="ai_disabled_hint">Нейросеть выключена. Включите её в настройках, чтобы получать предложения расписания</string>
+    <string name="set_time">Установить время</string>
+    <string name="set">Установить</string>
+    <string name="google_sign_in_error">Не удалось войти через Google. Проверьте, что на телефоне добавлен аккаунт Google</string>
 </resources>

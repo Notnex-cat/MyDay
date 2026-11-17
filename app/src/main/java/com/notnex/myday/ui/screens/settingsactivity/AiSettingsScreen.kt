@@ -10,7 +10,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Key
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,7 +26,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,9 +35,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.notnex.myday.R
 import com.notnex.myday.neuralnetwork.AiProvider
+import com.notnex.myday.ui.theme.AppIcons
 import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.AiSettingsViewModel
 
@@ -49,11 +49,11 @@ fun AiSettingsScreen(
     navController: NavController,
     aiSettingsViewModel: AiSettingsViewModel
 ) {
-    val selected by aiSettingsViewModel.selectedAi.collectAsState(AiProvider.GEMINI)
+    val selected by aiSettingsViewModel.selectedAi.collectAsStateWithLifecycle(AiProvider.GEMINI)
 
     var expanded by remember { mutableStateOf(false) }
 
-    val withKey by aiSettingsViewModel.providersWithKey.collectAsState(emptySet())
+    val withKey by aiSettingsViewModel.providersWithKey.collectAsStateWithLifecycle(emptySet())
 
     val hasKey = selected in withKey
 
@@ -118,7 +118,7 @@ fun AiSettingsScreen(
                             text = { Text(provider.displayName) },
                             trailingIcon = {
                                 if (provider in withKey) Icon(
-                                    Icons.Default.Key,
+                                    AppIcons.Key,
                                     contentDescription = null
                                 )
                             },
@@ -145,7 +145,7 @@ fun AiSettingsScreen(
                         keyboardType = KeyboardType.Password,
                         autoCorrectEnabled = false
                     ),
-                    label = { stringResource(R.string.api_key) },
+                    label = { Text(stringResource(R.string.api_key)) },
                 )
                 Button(
                     enabled = keyInput.isNotBlank(),

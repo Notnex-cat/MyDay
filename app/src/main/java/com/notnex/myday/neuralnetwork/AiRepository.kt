@@ -28,6 +28,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.IOException
+import java.time.DateTimeException
 import java.time.LocalDate
 import java.util.UUID
 import javax.inject.Inject
@@ -50,7 +51,7 @@ class AiRepository @Inject constructor(
     ): List<ScheduleItem> {
         val provider = aiSettingsRepository.provider.first()
         val apiKey = aiSettingsRepository.apiKey(provider).first()
-            ?: throw IllegalStateException("Не задан ключ нейросети")
+            ?: throw AiKeyMissingException()
 
         val planned = existing.joinToString("\n") { "${it.time.format(TIME_FORMAT)} — ${it.task}" }
         val fullInput = if (existing.isEmpty()) userInput
@@ -60,14 +61,7 @@ class AiRepository @Inject constructor(
         val body = client.newCall(request).await()
 
 
-        val content = json.parseToJsonElement(body).jsonObject["choices"]
-            ?.jsonArray?.firstOrNull()
-            ?.jsonObject?.get("message")
-            ?.jsonObject?.get("content")
-            ?.jsonPrimitive?.contentOrNull
-            ?: throw IOException("Unexpected response format")
-
-        val items = json.decodeFromString<List<ScheduleItemResponse>>(extractJsonArray(content))
+        val items = parseScheduleResponse(json, body)
 
         return items.map { item ->
             ScheduleItem(
@@ -83,7 +77,7 @@ class AiRepository @Inject constructor(
     fun streamFeedback(note: String): Flow<String> = callbackFlow {
         val provider = aiSettingsRepository.provider.first()
         val apiKey = aiSettingsRepository.apiKey(provider).first()
-            ?: throw IllegalStateException("Не задан ключ нейросети")
+            ?: throw AiKeyMissingException()
         val call = client.newCall(
             buildRequest(
                 FEEDBACK_SYSTEM_PROMPT,
@@ -121,13 +115,17 @@ class AiRepository @Inject constructor(
         awaitClose { call.cancel() }
     }.buffer(Channel.UNLIMITED)
 
-    private fun parseDelta(data: String): String? =
+    private fun parseDelta(data: String): String? = try {
         json.parseToJsonElement(data).jsonObject["choices"]
             ?.jsonArray?.firstOrNull()
             ?.jsonObject?.get("delta")
             ?.jsonObject?.get("content")
             ?.jsonPrimitive?.contentOrNull
             ?.takeIf { it.isNotEmpty() }
+    } catch (e: IllegalArgumentException) {
+        // SerializationException — тоже IllegalArgumentException.
+        throw AiResponseFormatException("Unexpected stream chunk", e)
+    }
 
     // Тело собираем через JSON-билдер: пользовательский текст с кавычками и переводами строк
     // не ломает запрос (раньше он подставлялся в строку руками).
@@ -158,14 +156,6 @@ class AiRepository @Inject constructor(
             .addHeader("Authorization", "Bearer $apiKey")
             .apply { if (stream) addHeader("Accept", "text/event-stream") }
             .build()
-    }
-
-    // Нейросеть иногда оборачивает ответ в ```json ... ``` или добавляет пояснение вокруг массива.
-    private fun extractJsonArray(content: String): String {
-        val start = content.indexOf('[')
-        val end = content.lastIndexOf(']')
-        if (start == -1 || end <= start) throw IOException("Response does not contain a JSON array")
-        return content.substring(start, end + 1)
     }
 
     private suspend fun Call.await(): String = suspendCancellableCoroutine { continuation ->
@@ -205,3 +195,37 @@ class AiRepository @Inject constructor(
 }
 
 class AiHttpException(val code: Int, body: String) : IOException("HTTP $code: $body")
+
+/** В настройках нет ключа выбранного провайдера: запрос даже не отправлялся. */
+class AiKeyMissingException : IllegalStateException("AI key is not set")
+
+/** Нейросеть ответила, но не тем, что можно разобрать: не JSON, не массив, кривое время. */
+class AiResponseFormatException(message: String, cause: Throwable? = null) : IOException(message, cause)
+
+/**
+ * Достаёт пункты расписания из ответа в формате OpenAI chat completions.
+ * Любая ошибка разбора становится [AiResponseFormatException]: человеку нужно сказать
+ * «нейросеть ответила не то», а не «нет интернета».
+ */
+internal fun parseScheduleResponse(json: Json, body: String): List<ScheduleItemResponse> = try {
+    val content = json.parseToJsonElement(body).jsonObject["choices"]
+        ?.jsonArray?.firstOrNull()
+        ?.jsonObject?.get("message")
+        ?.jsonObject?.get("content")
+        ?.jsonPrimitive?.contentOrNull
+        ?: throw AiResponseFormatException("Response has no message content")
+    json.decodeFromString<List<ScheduleItemResponse>>(extractJsonArray(content))
+} catch (e: IllegalArgumentException) {
+    // Сюда попадает и SerializationException: не JSON или не та структура.
+    throw AiResponseFormatException("Response is not valid JSON", e)
+} catch (e: DateTimeException) {
+    throw AiResponseFormatException("Response has an invalid time", e)
+}
+
+// Нейросеть иногда оборачивает ответ в ```json ... ``` или добавляет пояснение вокруг массива.
+internal fun extractJsonArray(content: String): String {
+    val start = content.indexOf('[')
+    val end = content.lastIndexOf(']')
+    if (start == -1 || end <= start) throw AiResponseFormatException("Response does not contain a JSON array")
+    return content.substring(start, end + 1)
+}

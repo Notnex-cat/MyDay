@@ -1,7 +1,12 @@
 package com.notnex.myday.ui.screens.settingsactivity
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,7 +37,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +51,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.notnex.myday.R
@@ -56,6 +62,7 @@ import com.notnex.myday.ui.navigation.AiSettingsRoute
 import com.notnex.myday.ui.navigation.AuthRoute
 import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.SettingsViewModel
+import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,15 +81,31 @@ fun SettingsScreen(
     // Одна переменная вместо Boolean на каждое напоминание: «открыты два окна сразу» не записать.
     var timePickerType by remember { mutableStateOf<ReminderType?>(null) }
 
-    val dayNoteEnabled by settingsViewModel.dayNoteEnabled.collectAsState(false)
-    val dayNoteTime by settingsViewModel.dayNoteTime.collectAsState(null)
+    val dayNoteEnabled by settingsViewModel.dayNoteEnabled.collectAsStateWithLifecycle(false)
+    val dayNoteTime by settingsViewModel.dayNoteTime.collectAsStateWithLifecycle(null)
 
-    val bedtimeEnabled by settingsViewModel.bedtimeEnabled.collectAsState(false)
-    val bedtimeTime by settingsViewModel.bedtimeTime.collectAsState(null)
+    val bedtimeEnabled by settingsViewModel.bedtimeEnabled.collectAsStateWithLifecycle(false)
+    val bedtimeTime by settingsViewModel.bedtimeTime.collectAsStateWithLifecycle(null)
 
-    val aiEnabled by settingsViewModel.aiEnabled.collectAsState(false)
-    val hasApiKey by settingsViewModel.hasApiKey.collectAsState(true)
+    val aiEnabled by settingsViewModel.aiEnabled.collectAsStateWithLifecycle(false)
+    val hasApiKey by settingsViewModel.hasApiKey.collectAsStateWithLifecycle(true)
     val aiKeyMissing = aiEnabled && !hasApiKey
+
+    // Разрешение на уведомления спрашиваем в момент включения напоминания: тут человеку понятно,
+    // зачем оно нужно. Ответ не обрабатываем — при отказе напоминание просто промолчит,
+    // а система сама перестанет показывать окно после второго отказа.
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+    val enableReminder: (LocalTime, ReminderType) -> Unit = { time, type ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        settingsViewModel.enableReminder(time, type)
+    }
 
     LaunchedEffect(key1 = state.error) {
         state.error?.let { error ->
@@ -96,7 +119,7 @@ fun SettingsScreen(
         ReminderTimeDialog(
             if (type == ReminderType.DAY_NOTE) dayNoteTime else bedtimeTime,
             onConfirm = { time ->
-                settingsViewModel.enableReminder(time, type)
+                enableReminder(time, type)
                 timePickerType = null
             },
             onDismiss = { timePickerType = null },
@@ -212,7 +235,7 @@ fun SettingsScreen(
                     if (isOn) {
                         // Переключатель возвращает прежнее время; пока DataStore не прочитан (null), ждём.
                         dayNoteTime?.let {
-                            settingsViewModel.enableReminder(
+                            enableReminder(
                                 it, ReminderType.DAY_NOTE
                             )
                         }
@@ -230,7 +253,7 @@ fun SettingsScreen(
                 onEnabledChange = { isOn ->
                     if (isOn) {
                         bedtimeTime?.let {
-                            settingsViewModel.enableReminder(
+                            enableReminder(
                                 it, ReminderType.BEDTIME
                             )
                         }

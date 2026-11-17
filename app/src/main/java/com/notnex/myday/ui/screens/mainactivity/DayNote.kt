@@ -26,10 +26,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.notnex.myday.R
 import com.notnex.myday.neuralnetwork.NNResult
@@ -46,7 +47,6 @@ import com.notnex.myday.neuralnetwork.aiErrorText
 import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
 import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.MyDayViewModel
-import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -58,18 +58,26 @@ fun SharedTransitionScope.DayNote(
     date: LocalDate,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    val day by remember(date) { viewModel.observeDay(date) }.collectAsState(initial = null)
+    val day by remember(date) { viewModel.observeDay(date) }.collectAsStateWithLifecycle(initialValue = null)
 
-    var noteText by remember { mutableStateOf("") }
+    var noteText by rememberSaveable(date) { mutableStateOf("") }
 
     // Текст подставляем один раз при открытии: дальше источник правды — поле ввода,
     // иначе каждое автосохранение перезаписывало бы то, что пользователь печатает.
+    // Флаг сохраняется вместе с текстом: после поворота экрана поле не перечитывает базу,
+    // в которую последние полторы секунды набранного ещё могли не попасть.
+    var noteLoaded by rememberSaveable(date) { mutableStateOf(false) }
     LaunchedEffect(date) {
-        noteText = viewModel.observeDay(date).first()?.note.orEmpty()
+        if (!noteLoaded) {
+            noteText = viewModel.getDay(date)?.note.orEmpty()
+            noteLoaded = true
+        }
     }
 
-    val feedbackState by nnViewModel.feedbackState.collectAsState()
-    val streamedFeedback by nnViewModel.feedbackText.collectAsState()
+    val aiEnabled by nnViewModel.aiEnabled.collectAsStateWithLifecycle()
+
+    val feedbackState by nnViewModel.feedbackState.collectAsStateWithLifecycle()
+    val streamedFeedback by nnViewModel.feedbackText.collectAsStateWithLifecycle()
     val isLoading = feedbackState is NNResult.Loading
 
     // Пока идёт (или только что закончился) запрос — показываем стрим, иначе сохранённый ответ
@@ -132,16 +140,19 @@ fun SharedTransitionScope.DayNote(
                 )
             )
 
-            Button(
-                modifier = Modifier.padding(top = MyDayTheme.spacing.md),
-                enabled = noteText.isNotBlank() && !isLoading,
-                onClick = {
-                    nnViewModel.requestFeedback(noteText) { fullText ->
-                        viewModel.saveAiFeedback(date, fullText)
+            // Нейросеть выключена в настройках — кнопки нет, сохранённый отзыв остаётся виден.
+            if (aiEnabled == true) {
+                Button(
+                    modifier = Modifier.padding(top = MyDayTheme.spacing.md),
+                    enabled = noteText.isNotBlank() && !isLoading,
+                    onClick = {
+                        nnViewModel.requestFeedback(noteText) { fullText ->
+                            viewModel.saveAiFeedback(date, fullText)
+                        }
                     }
+                ) {
+                    Text(text = stringResource(R.string.ask_ai))
                 }
-            ) {
-                Text(text = stringResource(R.string.ask_ai))
             }
 
             LazyColumn( // нужно, чтобы длинный ответ листался

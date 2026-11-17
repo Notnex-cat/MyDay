@@ -5,11 +5,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.StarHalf
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.StarOutline
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +24,9 @@ fun RatingBar(
     onRatingChanged: (Double) -> Unit,
     starsColor: Color = Color.Yellow
 ) {
+    // pointerInput(Unit) запускается один раз и запомнил бы первую лямбду навсегда.
+    // rememberUpdatedState подменяет её на свежую, не перезапуская обработку жестов.
+    val currentOnRatingChanged by rememberUpdatedState(onRatingChanged)
     Row {
         for (index in 1..stars) {
             Box(
@@ -32,9 +35,9 @@ fun RatingBar(
                         detectTapGestures { offset ->
                             val half = size.width / 2
                             if (offset.x <= half) {
-                                onRatingChanged(index - 0.5)
+                                currentOnRatingChanged(index - 0.5)
                             } else {
-                                onRatingChanged(index.toDouble())
+                                currentOnRatingChanged(index.toDouble())
                             }
                         }
                     },
@@ -43,8 +46,8 @@ fun RatingBar(
                 Icon(
                     imageVector = when {
                         index <= rating -> Icons.Rounded.Star
-                        index - 0.5 == rating -> Icons.AutoMirrored.Rounded.StarHalf
-                        else -> Icons.Rounded.StarOutline
+                        index - 0.5 == rating -> AppIcons.StarHalf
+                        else -> AppIcons.StarOutline
                     },
                     contentDescription = null,
                     tint = starsColor,

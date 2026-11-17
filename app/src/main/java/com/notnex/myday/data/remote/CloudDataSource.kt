@@ -3,6 +3,7 @@ package com.notnex.myday.data.remote
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -51,6 +52,38 @@ class CloudDataSource @Inject constructor(
         schedule(uid).document(id).delete().await()
     }
 
+    suspend fun setDays(uid: String, dtos: List<MyDayFirebaseDTO>) {
+        val days = days(uid)
+        commitInBatches(dtos) { batch, dto -> batch.set(days.document(dto.date), dto) }
+    }
+
+    suspend fun setSchedules(uid: String, dtos: List<MyScheduleFirebaseDTO>) {
+        applyScheduleChanges(uid, upserts = dtos, removedIds = emptyList())
+    }
+
+    /** Записи и удаления пунктов расписания одной пачкой: либо применятся все, либо ни одной. */
+    suspend fun applyScheduleChanges(
+        uid: String,
+        upserts: List<MyScheduleFirebaseDTO>,
+        removedIds: List<String>
+    ) {
+        val schedule = schedule(uid)
+        val operations: List<(WriteBatch) -> Unit> =
+            upserts.map { dto -> { batch: WriteBatch -> batch.set(schedule.document(dto.id), dto); Unit } } +
+                removedIds.map { id -> { batch: WriteBatch -> batch.delete(schedule.document(id)); Unit } }
+        commitInBatches(operations) { batch, operation -> operation(batch) }
+    }
+
+    // commit() сразу кладёт всю пачку в оффлайн-очередь Firestore, а await() ждёт ответа сервера.
+    // Поэтому отмена корутины посреди ожидания уже поставленные записи не теряет.
+    private suspend fun <T> commitInBatches(items: List<T>, add: (WriteBatch, T) -> Unit) {
+        items.chunked(BATCH_LIMIT).forEach { chunk ->
+            val batch = firestore.batch()
+            chunk.forEach { add(batch, it) }
+            batch.commit().await()
+        }
+    }
+
     fun observeDays(uid: String): Flow<RemoteChanges<MyDayFirebaseDTO>> =
         observe(days(uid), MyDayFirebaseDTO::class.java)
 
@@ -91,4 +124,9 @@ class CloudDataSource @Inject constructor(
         }
         awaitClose { registration.remove() }
     }.buffer(Channel.UNLIMITED)
+
+    private companion object {
+        // У Firestore предел — 500 операций в одной пачке.
+        const val BATCH_LIMIT = 450
+    }
 }

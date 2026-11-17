@@ -1,6 +1,7 @@
 package com.notnex.myday.ui.screens.settingsactivity
 
 import android.app.Activity
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,10 +28,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.Identity
@@ -56,8 +58,8 @@ fun AuthScreen(
     navController: NavController,
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
-    val authState by authViewModel.authState.collectAsState()
-    val emailState = remember { mutableStateOf("") }
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
+    val emailState = rememberSaveable { mutableStateOf("") }
     val passwordState = remember { mutableStateOf("") }
     val context = LocalContext.current
     val oneTapClient = remember { Identity.getSignInClient(context) }
@@ -96,7 +98,7 @@ fun AuthScreen(
                 modifier = Modifier.border(width = 2.dp, color = Color.DarkGray, shape = RoundedCornerShape(20.dp)),
                 label = { Text(text = stringResource(R.string.login)) },
                 maxLines = 1,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
                     onNext = {
                         focusManager.moveFocus(FocusDirection.Down)
@@ -125,6 +127,7 @@ fun AuthScreen(
                 authViewModel.signInWithEmail(emailState.value, passwordState.value)
                 },
                 shape = RoundedCornerShape(12.dp),
+                enabled = !authState.isLoading,
 
                 modifier = Modifier
                     .height(52.dp)
@@ -138,6 +141,7 @@ fun AuthScreen(
                 authViewModel.signUpWithEmail(emailState.value, passwordState.value)
                 },
                 shape = RoundedCornerShape(12.dp),
+                enabled = !authState.isLoading,
 
                 modifier = Modifier
                     .height(52.dp)
@@ -163,9 +167,14 @@ fun AuthScreen(
                     launcher.launch(
                         IntentSenderRequest.Builder(result.pendingIntent.intentSender).build()
                     )
+                }.addOnFailureListener {
+                    // Чаще всего на телефоне нет аккаунта Google или сервисов Google Play.
+                    // Без обработчика кнопка молча не делала бы ничего.
+                    Toast.makeText(context, R.string.google_sign_in_error, Toast.LENGTH_LONG).show()
                 }
             },
                 shape = RoundedCornerShape(12.dp),
+                enabled = !authState.isLoading,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer

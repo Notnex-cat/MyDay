@@ -7,6 +7,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.notnex.myday.R
 import java.time.LocalTime
 
 /**
@@ -27,7 +29,7 @@ fun ReminderTimeDialog(
     )
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Установить время") },
+        title = { Text(stringResource(R.string.set_time)) },
         text = {
             TimeInput(
                 state = timePickerState,
@@ -36,12 +38,12 @@ fun ReminderTimeDialog(
         confirmButton = {
             TextButton(onClick = {
                 onConfirm(LocalTime.of(timePickerState.hour, timePickerState.minute))
-            }) { Text("Установить") }
+            }) { Text(stringResource(R.string.set)) }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismiss
-            ) { Text("Отмена") }
+            ) { Text(stringResource(R.string.cancel)) }
         }
     )
 }

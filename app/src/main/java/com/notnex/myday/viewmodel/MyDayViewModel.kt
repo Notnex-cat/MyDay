@@ -7,14 +7,18 @@ import com.notnex.myday.data.MyDayEntity
 import com.notnex.myday.data.MyDayRepository
 import com.notnex.myday.data.ScheduleEntity
 import com.notnex.myday.neuralnetwork.ScheduleItem
-import com.notnex.myday.notification.ReminderScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
@@ -25,7 +29,6 @@ import kotlin.time.Duration.Companion.milliseconds
 class MyDayViewModel @Inject constructor(
     private val repository: MyDayRepository,
     private val savedStateHandle: SavedStateHandle,
-    private val reminderScheduler: ReminderScheduler
 ) : ViewModel() {
 
     private val _selectedDate = MutableStateFlow(
@@ -38,9 +41,24 @@ class MyDayViewModel @Inject constructor(
         savedStateHandle[KEY_DATE] = date.toString()
     }
 
+    // День и расписание выбранной даты для главного экрана. flatMapLatest при смене даты бросает
+    // прежний запрос, onStart сразу очищает экран от данных прошлой даты. WhileSubscribed(5000)
+    // держит запрос к базе 5 секунд после ухода экрана: поворот его не перезапускает.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val selectedDay: StateFlow<MyDayEntity?> = _selectedDate
+        .flatMapLatest { date -> repository.observeDay(date).onStart { emit(null) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val selectedSchedule: StateFlow<List<ScheduleEntity>> = _selectedDate
+        .flatMapLatest { date -> repository.observeSchedule(date).onStart { emit(emptyList()) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
     fun observeDay(date: LocalDate): Flow<MyDayEntity?> = repository.observeDay(date)
 
-    fun observeSchedule(date: LocalDate): Flow<List<ScheduleEntity>> = repository.observeSchedule(date)
+    suspend fun getDay(date: LocalDate): MyDayEntity? = repository.getDay(date)
+
+    suspend fun getSchedule(date: LocalDate): List<ScheduleEntity> = repository.getSchedule(date)
 
     suspend fun getScheduleItem(id: String): ScheduleEntity? = repository.getScheduleItem(id)
 
@@ -73,11 +91,7 @@ class MyDayViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        flushNote() //вызов функции чтобы сохранилось все равно сообщение
-    }
-
-    fun addScheduleItems(date: LocalDate, items: List<ScheduleItem>) {
-        viewModelScope.launch { repository.addScheduleItems(date, items) }
+        flushNote() // экран закрыли раньше, чем истекла задержка: дописываем остаток
     }
 
     fun updateScheduleItem(id: String, title: String, time: LocalTime, note: String) {
@@ -97,5 +111,6 @@ class MyDayViewModel @Inject constructor(
     companion object {
         const val KEY_DATE = "selected_date"
         const val NOTE_SAVE_DELAY_MS = 1500L
+        const val STOP_TIMEOUT_MS = 5_000L
     }
 }

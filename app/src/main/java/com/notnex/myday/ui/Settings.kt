@@ -7,11 +7,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -46,7 +46,7 @@ class Settings : ComponentActivity() {
                         composable<SettingsRoute> {
                             val authViewModel: AuthViewModel = hiltViewModel()
                             val settingsViewModel: SettingsViewModel = hiltViewModel()
-                            val authState by authViewModel.authState.collectAsState()
+                            val authState by authViewModel.authState.collectAsStateWithLifecycle()
                             // key пересоздаёт экран при смене пользователя, сбрасывая его локальное состояние
                             key(authState.user?.userId) {
                                 SettingsScreen(

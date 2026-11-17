@@ -12,6 +12,18 @@ interface MyScheduleDAO {
     @Upsert
     suspend fun upsert(item: ScheduleEntity)
 
+    @Upsert
+    suspend fun upsertAll(items: List<ScheduleEntity>)
+
+    @Query("SELECT * FROM schedule_entries WHERE scheduleDate = :date ORDER BY time, id")
+    suspend fun getByDate(date: LocalDate): List<ScheduleEntity>
+
+    @Query("SELECT * FROM schedule_entries WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<String>): List<ScheduleEntity>
+
+    @Query("DELETE FROM schedule_entries WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>)
+
     @Query("SELECT * FROM schedule_entries WHERE scheduleDate = :date ORDER BY time, id")
     fun observeByDate(date: LocalDate): Flow<List<ScheduleEntity>>
 
@@ -20,7 +32,4 @@ interface MyScheduleDAO {
 
     @Query("SELECT * FROM schedule_entries")
     suspend fun getAll(): List<ScheduleEntity>
-
-    @Query("DELETE FROM schedule_entries WHERE id = :id")
-    suspend fun deleteById(id: String)
 }
