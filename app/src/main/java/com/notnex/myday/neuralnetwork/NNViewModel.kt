@@ -16,7 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class NNViewModel @Inject constructor(
-    private val mistral: AiRepository
+    private val aiRepository: AiRepository
 ) : ViewModel() {
 
     private val _scheduleState = MutableStateFlow<NNResult<List<ScheduleItem>>>(NNResult.Idle)
@@ -37,7 +37,7 @@ class NNViewModel @Inject constructor(
         scheduleJob = viewModelScope.launch {
             _scheduleState.value = NNResult.Loading
             _scheduleState.value = try {
-                NNResult.Success(mistral.generateSchedule(userInput, date, draft))
+                NNResult.Success(aiRepository.generateSchedule(userInput, date, draft))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -54,7 +54,7 @@ class NNViewModel @Inject constructor(
             _feedbackText.value = ""
             _feedbackState.value = NNResult.Loading
             var failure: Throwable? = null
-            mistral.streamFeedback(note)
+            aiRepository.streamFeedback(note)
                 .catch { failure = it }
                 .collect { chunk -> _feedbackText.value += chunk }
 

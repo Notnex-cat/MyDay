@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -9,13 +7,6 @@ plugins {
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.kotlin.serialization)
 }
-
-// Ключ нейросети лежит в local.properties (он в .gitignore). Без него сборка не падает,
-// просто запросы к нейросети будут возвращать 401.
-val localProperties = Properties().apply {
-    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
-}
-val nnApiKey: String = localProperties.getProperty("nn_key", "")
 
 android {
     namespace = "com.notnex.myday"
@@ -29,8 +20,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        buildConfigField("String", "NN_API_KEY", "\"$nnApiKey\"")
     }
 
 
@@ -63,7 +52,6 @@ android {
 
     buildFeatures {
         compose = true
-        buildConfig = true
     }
 }
 

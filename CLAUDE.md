@@ -32,7 +32,7 @@ MyDay — Android-приложение (Kotlin, Jetpack Compose, один мод
 Без них проект не собирается или не работает, в репозитории их нет:
 
 - `app/google-services.json` — конфигурация Firebase, без неё падает плагин google-services.
-- `local.properties` — `sdk.dir`. Строка `nn_key` осталась от старой схемы: `BuildConfig.NN_API_KEY` код больше не читает, ключ нейросети вводится в приложении.
+- `local.properties` — `sdk.dir`. Ключ нейросети в сборку больше не вшивается: его вводят в приложении.
 
 ## Архитектура
 
