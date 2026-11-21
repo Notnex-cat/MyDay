@@ -1,23 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Sun Face -->
-    <item>
-        <shape android:shape="oval">
-            <size android:width="120dp" android:height="120dp" />
-            <solid android:color="#FFD54F" />
-        </shape>
-    </item>
-    <item android:top="30dp" android:left="30dp">
-        <shape android:shape="oval">
-            <size android:width="20dp" android:height="20dp" />
-            <solid android:color="#F57C00" />
-        </shape>
-    </item>
-    <item android:top="30dp" android:right="30dp">
-        <shape android:shape="oval">
-            <size android:width="20dp" android:height="20dp" />
-            <solid android:color="#F57C00" />
-        </shape>
-    </item>
-    <!-- Add more lines or details to represent calendar cells -->
-</layer-list>
+<!--
+  Знак MyDay: сонное солнце садится за горизонт, рядом звёздочка — день закончился, пора его записать.
+  Нарисован на холсте 256×256 и растянут на видимую область 72dp (масштаб 72/256, отступ 18dp).
+  Горизонт выходит за холст до краёв слоя 108dp, чтобы при любой маске не было щели.
+  Звёздочка сдвинута внутрь безопасного круга 66dp, иначе круглая маска её обрежет.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.28125"
+        android:scaleY="0.28125"
+        android:translateX="18"
+        android:translateY="18">
+        <!-- солнце -->
+        <path
+            android:fillColor="#FFB547"
+            android:pathData="M44,160 A84,84 0 1,1 212,160 A84,84 0 1,1 44,160 Z" />
+        <!-- закрытые глаза -->
+        <path
+            android:pathData="M84.32,155.8 q15.96,16.8 31.92,0 M139.76,155.8 q15.96,16.8 31.92,0"
+            android:strokeColor="#2A2350"
+            android:strokeWidth="11"
+            android:strokeLineCap="round" />
+        <!-- щёчки -->
+        <path
+            android:fillColor="#FF8A6B"
+            android:pathData="M65.84,176.8 a11.76,11.76 0 1,1 23.52,0 a11.76,11.76 0 1,1 -23.52,0 Z M166.64,176.8 a11.76,11.76 0 1,1 23.52,0 a11.76,11.76 0 1,1 -23.52,0 Z" />
+        <!-- горизонт и строка дневника на нём -->
+        <path
+            android:fillColor="#17142A"
+            android:pathData="M-64,196 H320 V320 H-64 Z" />
+        <path
+            android:fillColor="#3D3760"
+            android:pathData="M67,214 H189 A5,5 0 0,1 189,224 H67 A5,5 0 0,1 67,214 Z" />
+        <!-- звёздочка -->
+        <path
+            android:fillColor="#FFE3A3"
+            android:pathData="M184,64 l6,14 l14,6 l-14,6 l-6,14 l-6,-14 l-14,-6 l14,-6 z" />
+    </group>
+</vector>

@@ -46,7 +46,7 @@ class ReminderNotifier@Inject constructor(@ApplicationContext private val contex
         val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
         val notification = NotificationCompat.Builder(context, "notification_channel_id")
-            .setSmallIcon(R.drawable.ic_launcher_monochrome)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(type.title))
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
