@@ -59,4 +59,7 @@
     <string name="set_time">Set time</string>
     <string name="set">Set</string>
     <string name="google_sign_in_error">Google sign-in failed. Check that a Google account is added on this device</string>
+    <string name="theme_sunny">Sunny</string>
+    <string name="theme_dusk">Dusk</string>
+    <string name="theme_pine">Pine</string>
 </resources>

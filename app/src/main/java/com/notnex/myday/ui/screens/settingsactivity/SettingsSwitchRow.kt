@@ -39,7 +39,7 @@ fun SettingsSwitchRow(
         elevation = CardDefaults.cardElevation(
             defaultElevation = 8.dp
         ), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.onTertiary
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ), modifier = Modifier.Companion
             .fillMaxWidth()
             .padding(

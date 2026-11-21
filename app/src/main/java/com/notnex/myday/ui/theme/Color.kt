@@ -1,162 +1,216 @@
 package com.notnex.myday.ui.theme
 
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 
-// Палитра MyDay по мотивам приложения Burger King: бежевая страница, кремовые карточки,
-// шоколадный текст, жёлтая главная кнопка, оранжевые и красные акценты, чёрные блоки.
-// У оригинала нет тёмной темы; тёмная собрана по его же чёрным блокам: страница цвета эспрессо,
-// карточки чуть светлее, текст кремовый, жёлтый и оранжевый остаются теми же.
-// Здесь только тона, роли раздаёт Theme.kt. Число в имени — примерная светлота (0 — чёрный,
-// 100 — белый). Все цвета непрозрачные: с альфой контраст зависел бы от фона под ними.
-
-// Шоколад — весь текст. Приглушённый тон темнее, чем в оригинале: иначе подписи не проходят AA.
-val Brown20: Color = Color(0xFF502314)
-val Brown25: Color = Color(0xFF3A2117)
-val Brown35: Color = Color(0xFF704C3D)
-val Brown45: Color = Color(0xFF8A6A5C)
-
-// Песок и крем — поверхности: страница, карточки и самое светлое (выбранное, чипы).
-val Sand80: Color = Color(0xFFDCCDB2)
-val Sand83: Color = Color(0xFFDDCFB4)
-val Sand88: Color = Color(0xFFE9DDC5)
-val Cream93: Color = Color(0xFFF4EBDC)
-val Cream97: Color = Color(0xFFFBF6F0)
-
-// Эспрессо и латте — поверхности и вторичный текст тёмной темы.
-val Espresso6: Color = Color(0xFF0F0B09)
-val Espresso9: Color = Color(0xFF16110E)
-val Espresso15: Color = Color(0xFF2A211C)
-val Espresso20: Color = Color(0xFF3A2E27)
-val Latte50: Color = Color(0xFF94796D)
-val Latte70: Color = Color(0xFFB8A194)
-val Latte78: Color = Color(0xFFCDB8AA)
-
-// Горчица — главная кнопка и FAB.
-val Mustard70: Color = Color(0xFFFFAA00)
-
-// Апельсин — голос ассистента. Яркий тон только как подложка, для текста — тёмный.
-val Orange15: Color = Color(0xFF4A1E00)
-val Orange35: Color = Color(0xFF943F07)
-val Orange60: Color = Color(0xFFEB7A2A)
-val Orange75: Color = Color(0xFFFFA766)
-
-// Томат — акцентная заливка (акции, «активировать») и ошибки. Для текста ошибок — тёмный тон.
-val Tomato20: Color = Color(0xFF5C1000)
-val Tomato30: Color = Color(0xFF6E1200)
-val Tomato33: Color = Color(0xFF8C1D00)
-val Tomato35: Color = Color(0xFFA51B00)
-val Tomato45: Color = Color(0xFFD62300)
-val Tomato70: Color = Color(0xFFFF8F78)
-val Tomato92: Color = Color(0xFFFADBD0)
-
-// Огурец — успех. Темнее зелёного оригинала, чтобы годился и для текста.
-val Pickle15: Color = Color(0xFF003914)
-val Pickle25: Color = Color(0xFF0B4A1D)
-val Pickle30: Color = Color(0xFF124A22)
-val Pickle35: Color = Color(0xFF116329)
-val Pickle70: Color = Color(0xFF5EC47B)
-val Pickle90: Color = Color(0xFFC8F0D2)
-val Pickle92: Color = Color(0xFFD6EDD8)
-
-// Ночь — чёрные блоки с тёмными карточками внутри.
-val Night0: Color = Color(0xFF000000)
-val Night16: Color = Color(0xFF2B2A28)
-val Night65: Color = Color(0xFFA79A92)
-
-// Золото — градиент итоговой суммы.
-val Gold70: Color = Color(0xFFD2A973)
-val Gold85: Color = Color(0xFFEACE9C)
-
-val White: Color = Color(0xFFFFFFFF)
-
-/** Подложка и цвет текста поверх неё — всегда парой, чтобы контраст не разошёлся. */
+/**
+ * Тона одной темы оформления в одном варианте (светлом или тёмном). Из них собираются все
+ * роли Material 3, поэтому новая тема — это только новый набор значений.
+ *
+ * Каждая пара «текст — подложка» проходит WCAG AA; это проверяет ThemeContrastTest.
+ */
 @Immutable
-data class Tint(
-    val container: Color,
-    val content: Color,
+data class Palette(
+    /** Страница. */
+    val background: Color,
+    /** Карточки, листы, меню. */
+    val card: Color,
+    /** Блоки внутри карточек, выделение «сегодня». */
+    val cardHigh: Color,
+    val text: Color,
+    val textVariant: Color,
+    /** Рамки и неактивные элементы — должны отличаться от фона не меньше чем на 3:1. */
+    val outline: Color,
+    /** Разделители и линии, которые только намечают структуру. */
+    val line: Color,
+    /** Фирменный цвет: главная кнопка, «+», выбранный день. */
+    val accent: Color,
+    val onAccent: Color,
+    /** Цвет текстовых кнопок, переключателей и курсора — должен читаться на странице. */
+    val primary: Color,
+    val onPrimary: Color,
+    /** Голос ассистента. */
+    val assistant: Color,
+    val onAssistant: Color,
+    /** Оценка 1 и 3; оценка 5 — фирменный accent. Между ними цвет плавно смешивается. */
+    val ratingLow: Color,
+    val ratingMid: Color,
+)
+
+// Ошибки одинаковы во всех темах: красный не должен зависеть от вкуса.
+private val ErrorLight = Color(0xFFB3261E)
+private val ErrorContainerLight = Color(0xFFFFDAD6)
+private val OnErrorContainerLight = Color(0xFF410002)
+private val ErrorDark = Color(0xFFFFB4AB)
+private val OnErrorDark = Color(0xFF690005)
+private val ErrorContainerDark = Color(0xFF93000A)
+private val OnErrorContainerDark = Color(0xFFFFDAD6)
+
+// Солнечный: тёплый графит и солнечно-жёлтый, ассистент голубой.
+val SunnyLight: Palette = Palette(
+    background = Color(0xFFFFF7E6),
+    card = Color(0xFFFFFFFF),
+    cardHigh = Color(0xFFFCEFCF),
+    text = Color(0xFF1E1B16),
+    textVariant = Color(0xFF5E574C),
+    outline = Color(0xFF8A8070),
+    line = Color(0xFFEADFC6),
+    accent = Color(0xFFFFC52E),
+    onAccent = Color(0xFF1E1B16),
+    primary = Color(0xFF7A5200),
+    onPrimary = Color(0xFFFFFFFF),
+    assistant = Color(0xFFDDEEFF),
+    onAssistant = Color(0xFF13324D),
+    ratingLow = Color(0xFFE5483A),
+    ratingMid = Color(0xFFFF8F2E),
+)
+val SunnyDark: Palette = Palette(
+    background = Color(0xFF1A1815),
+    card = Color(0xFF26231F),
+    cardHigh = Color(0xFF332F29),
+    text = Color(0xFFF5F0E6),
+    textVariant = Color(0xFFBDB4A6),
+    outline = Color(0xFF8C8477),
+    line = Color(0xFF3E3932),
+    accent = Color(0xFFFFC52E),
+    onAccent = Color(0xFF1A1815),
+    primary = Color(0xFFFFC52E),
+    onPrimary = Color(0xFF1A1815),
+    assistant = Color(0xFF1E3142),
+    onAssistant = Color(0xFFCBE6FF),
+    ratingLow = Color(0xFFFF6B57),
+    ratingMid = Color(0xFFFF9A3D),
+)
+
+// Сумерки: вечернее небо и абрикосовое солнце, ассистент розово-коралловый.
+val DuskLight: Palette = Palette(
+    background = Color(0xFFF4F0EA),
+    card = Color(0xFFFFFFFF),
+    cardHigh = Color(0xFFECE6F2),
+    text = Color(0xFF221D3A),
+    textVariant = Color(0xFF5C5574),
+    outline = Color(0xFF857D99),
+    line = Color(0xFFD6CFE0),
+    accent = Color(0xFFFFB547),
+    onAccent = Color(0xFF2A1A00),
+    primary = Color(0xFF4B3F8F),
+    onPrimary = Color(0xFFFFFFFF),
+    assistant = Color(0xFFF6E1E4),
+    onAssistant = Color(0xFF5A2236),
+    ratingLow = Color(0xFFD9466E),
+    ratingMid = Color(0xFFFF7F66),
+)
+val DuskDark: Palette = Palette(
+    background = Color(0xFF17142A),
+    card = Color(0xFF231F3A),
+    cardHigh = Color(0xFF2E2950),
+    text = Color(0xFFF4EFE8),
+    textVariant = Color(0xFFB9B2CC),
+    outline = Color(0xFF8A82A6),
+    line = Color(0xFF3D3760),
+    accent = Color(0xFFFFB547),
+    onAccent = Color(0xFF2A1A00),
+    primary = Color(0xFFFFB547),
+    onPrimary = Color(0xFF2A1A00),
+    assistant = Color(0xFF3E2440),
+    onAssistant = Color(0xFFFFD9D0),
+    ratingLow = Color(0xFFF0597A),
+    ratingMid = Color(0xFFFF8A6B),
+)
+
+// Хвойный: тёмная хвоя и абрикосовый, ассистент серо-голубой.
+val PineLight: Palette = Palette(
+    background = Color(0xFFF1F4EE),
+    card = Color(0xFFFFFFFF),
+    cardHigh = Color(0xFFE3EBE3),
+    text = Color(0xFF14231E),
+    textVariant = Color(0xFF4E6159),
+    outline = Color(0xFF7A8C84),
+    line = Color(0xFFCFDAD2),
+    accent = Color(0xFFFFA45B),
+    onAccent = Color(0xFF2B1400),
+    primary = Color(0xFF1C5A49),
+    onPrimary = Color(0xFFFFFFFF),
+    assistant = Color(0xFFE1EEF4),
+    onAssistant = Color(0xFF173847),
+    ratingLow = Color(0xFFD9473F),
+    ratingMid = Color(0xFFF2774F),
+)
+val PineDark: Palette = Palette(
+    background = Color(0xFF0F1A17),
+    card = Color(0xFF172622),
+    cardHigh = Color(0xFF20332D),
+    text = Color(0xFFEEF3EE),
+    textVariant = Color(0xFFA9BDB4),
+    outline = Color(0xFF7F968D),
+    line = Color(0xFF2A4038),
+    accent = Color(0xFFFFA45B),
+    onAccent = Color(0xFF2B1400),
+    primary = Color(0xFFFFA45B),
+    onPrimary = Color(0xFF2B1400),
+    assistant = Color(0xFF1E2F3A),
+    onAssistant = Color(0xFFCFE6F2),
+    ratingLow = Color(0xFFE5584D),
+    ratingMid = Color(0xFFF2804F),
 )
 
 /**
- * Цвета сверх ролей Material 3. Берутся через `MyDayTheme.colors`.
- *
- * `promo` — красная заливка для акцентных действий, `night*` — чёрный блок с тёмными
- * карточками и выбранным кремовым сегментом, `goldStart`/`goldEnd` — концы градиента
- * для итоговой суммы, метки — пастель для тем, привычек и пунктов расписания.
+ * Все 36 ролей Material 3: пропущенная взялась бы из базовой фиолетовой схемы.
+ * Интерфейс плоский: surfaceTint совпадает с фоном, приподнятые поверхности не тонируются.
  */
-@Immutable
-data class ExtendedColors(
-    val success: Color,
-    val onSuccess: Color,
-    val successContainer: Color,
-    val onSuccessContainer: Color,
-    val promo: Color,
-    val onPromo: Color,
-    val night: Color,
-    val onNight: Color,
-    val nightContainer: Color,
-    val onNightContainer: Color,
-    val onNightVariant: Color,
-    val nightSelected: Color,
-    val onNightSelected: Color,
-    val goldStart: Color,
-    val goldEnd: Color,
-    val onGold: Color,
-    val orange: Tint,
-    val yellow: Tint,
-    val red: Tint,
-    val green: Tint,
-    val brown: Tint,
-    val cream: Tint,
-)
+fun Palette.toColorScheme(dark: Boolean): ColorScheme {
+    val base = if (dark) darkColorScheme() else lightColorScheme()
+    return base.copy(
+        primary = primary,
+        onPrimary = onPrimary,
+        // Главная кнопка, FAB и выбранный день — фирменный цвет.
+        primaryContainer = accent,
+        onPrimaryContainer = onAccent,
+        inversePrimary = accent,
+        secondary = textVariant,
+        onSecondary = background,
+        secondaryContainer = cardHigh,
+        onSecondaryContainer = text,
+        tertiary = onAssistant,
+        onTertiary = assistant,
+        tertiaryContainer = assistant,
+        onTertiaryContainer = onAssistant,
+        background = background,
+        onBackground = text,
+        surface = background,
+        onSurface = text,
+        surfaceVariant = cardHigh,
+        onSurfaceVariant = textVariant,
+        surfaceTint = background,
+        inverseSurface = text,
+        inverseOnSurface = background,
+        error = if (dark) ErrorDark else ErrorLight,
+        onError = if (dark) OnErrorDark else Color.White,
+        errorContainer = if (dark) ErrorContainerDark else ErrorContainerLight,
+        onErrorContainer = if (dark) OnErrorContainerDark else OnErrorContainerLight,
+        outline = outline,
+        outlineVariant = line,
+        scrim = Color.Black,
+        surfaceBright = cardHigh,
+        surfaceContainer = card,
+        surfaceContainerHigh = card,
+        surfaceContainerHighest = cardHigh,
+        surfaceContainerLow = card,
+        surfaceContainerLowest = background,
+        surfaceDim = background,
+    )
+}
 
-val LightExtendedColors: ExtendedColors = ExtendedColors(
-    success = Pickle35,
-    onSuccess = White,
-    successContainer = Pickle92,
-    onSuccessContainer = Pickle25,
-    promo = Tomato45,
-    onPromo = White,
-    night = Night0,
-    onNight = Cream97,
-    nightContainer = Night16,
-    onNightContainer = Cream97,
-    onNightVariant = Night65,
-    nightSelected = Cream97,
-    onNightSelected = Brown20,
-    goldStart = Gold70,
-    goldEnd = Gold85,
-    onGold = Brown20,
-    orange = Tint(container = Color(0xFFFCDCC4), content = Color(0xFF6B2C00)),
-    yellow = Tint(container = Color(0xFFFFE7B0), content = Color(0xFF5A3C00)),
-    red = Tint(container = Color(0xFFF9D6CB), content = Color(0xFF7A1500)),
-    green = Tint(container = Pickle92, content = Pickle25),
-    brown = Tint(container = Color(0xFFE6D2C8), content = Brown20),
-    cream = Tint(container = Cream97, content = Brown20),
-)
-
-// Чёрный блок и золото одинаковы в обеих темах: на странице эспрессо чёрный всё равно темнее.
-val DarkExtendedColors: ExtendedColors = ExtendedColors(
-    success = Pickle70,
-    onSuccess = Pickle15,
-    successContainer = Pickle30,
-    onSuccessContainer = Pickle90,
-    promo = Tomato45,
-    onPromo = White,
-    night = Night0,
-    onNight = Cream97,
-    nightContainer = Night16,
-    onNightContainer = Cream97,
-    onNightVariant = Night65,
-    nightSelected = Cream97,
-    onNightSelected = Brown20,
-    goldStart = Gold70,
-    goldEnd = Gold85,
-    onGold = Brown20,
-    orange = Tint(container = Color(0xFF5A2A0E), content = Color(0xFFFFD9BF)),
-    yellow = Tint(container = Color(0xFF4A3500), content = Color(0xFFFFE3A3)),
-    red = Tint(container = Color(0xFF5C1A0E), content = Color(0xFFFFD3C7)),
-    green = Tint(container = Pickle30, content = Pickle90),
-    brown = Tint(container = Color(0xFF3D2A20), content = Color(0xFFEAD6CB)),
-    cream = Tint(container = Cream93, content = Brown20),
-)
+/**
+ * Цвет оценки от 1 до 5: красный оттенок темы → средний → фирменный. Не оценено — null,
+ * тогда рисуется пустой цвет. Используется и для дня, и для пунктов расписания.
+ */
+fun Palette.ratingColor(score: Double): Color? = when {
+    score <= 0.0 -> null
+    score <= 3.0 -> lerp(ratingLow, ratingMid, ((score - 1.0) / 2.0).toFloat().coerceIn(0f, 1f))
+    else -> lerp(ratingMid, accent, ((score - 3.0) / 2.0).toFloat().coerceIn(0f, 1f))
+}

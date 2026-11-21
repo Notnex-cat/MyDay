@@ -58,4 +58,7 @@
     <string name="set_time">Установить время</string>
     <string name="set">Установить</string>
     <string name="google_sign_in_error">Не удалось войти через Google. Проверьте, что на телефоне добавлен аккаунт Google</string>
+    <string name="theme_sunny">Солнечный</string>
+    <string name="theme_dusk">Сумерки</string>
+    <string name="theme_pine">Хвойный</string>
 </resources>
