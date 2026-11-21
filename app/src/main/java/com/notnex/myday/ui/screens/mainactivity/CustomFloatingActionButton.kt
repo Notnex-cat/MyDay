@@ -89,7 +89,7 @@ fun CustomFloatingActionButton(
                     .padding(bottom = MyDayTheme.spacing.xs)
                     .background(
                         MaterialTheme.colorScheme.surfaceContainer,
-                        shape = RoundedCornerShape(18.dp)
+                        shape = RoundedCornerShape(22.dp)
                     )
                     .padding(vertical = MyDayTheme.spacing.sm)
             ) {
@@ -117,7 +117,7 @@ fun CustomFloatingActionButton(
             modifier = Modifier
                 .width(expandedFabWidth)
                 .height(expandedFabHeight),
-            shape = RoundedCornerShape(18.dp)
+            shape = RoundedCornerShape(22.dp)
         ) {
             Icon(
                 imageVector = fabIcon,

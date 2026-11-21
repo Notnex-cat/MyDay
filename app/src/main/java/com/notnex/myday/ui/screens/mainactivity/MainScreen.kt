@@ -6,10 +6,10 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -51,7 +51,6 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -183,7 +182,7 @@ private fun MainTopBar(
     onMenuClick: () -> Unit,
     onAccountClick: () -> Unit,
 ) {
-    CenterAlignedTopAppBar(
+    TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.background
         ),
@@ -243,10 +242,10 @@ private fun WeekStrip(
 
     HorizontalPager(state = pagerState, modifier = modifier) { page ->
         val weekStart = firstWeekStart.plusWeeks(page.toLong())
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
+        // Равные ячейки (weight) — «таблетка» выбранного дня одной ширины в любом месте недели.
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = MyDayTheme.spacing.sm)) {
             for (offset in 0L..6L) {
                 val date = weekStart.plusDays(offset)
                 DayCell(
@@ -262,36 +261,40 @@ private fun WeekStrip(
 }
 
 @Composable
-private fun DayCell(
+private fun RowScope.DayCell(
     dayOfWeek: String,
     dayOfMonth: String,
     isSelected: Boolean,
     isToday: Boolean,
     onClick: () -> Unit,
 ) {
-    val textColor =
-        if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary
+    val colors = MaterialTheme.colorScheme
     Column(
         modifier = Modifier
-            .padding(MyDayTheme.spacing.xxs)
-            .clip(RoundedCornerShape(12.dp))
+            .weight(1f)
+            .padding(horizontal = 2.dp)
+            .clip(CircleShape)
             .background(
                 when {
-                    isSelected -> MaterialTheme.colorScheme.primaryContainer
-                    isToday -> MaterialTheme.colorScheme.secondaryContainer
+                    isSelected -> colors.primaryContainer
+                    isToday -> colors.secondaryContainer
                     else -> Color.Transparent
                 }
             )
             .clickable(onClick = onClick)
-            .padding(vertical = MyDayTheme.spacing.xs, horizontal = MyDayTheme.spacing.sm),
+            .padding(vertical = MyDayTheme.spacing.sm),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = dayOfWeek, fontSize = 12.sp, color = textColor)
+        Text(
+            text = dayOfWeek,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isSelected) colors.onPrimaryContainer else colors.onSurfaceVariant,
+        )
         Text(
             text = dayOfMonth,
-            fontSize = 16.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = textColor
+            style = MaterialTheme.typography.titleMedium,
+            color = if (isSelected) colors.onPrimaryContainer else colors.onSurface,
+            modifier = Modifier.padding(top = MyDayTheme.spacing.xxs),
         )
     }
 }
