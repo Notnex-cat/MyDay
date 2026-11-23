@@ -8,25 +8,26 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +39,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -47,9 +50,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -67,12 +71,16 @@ import com.notnex.myday.ui.navigation.EditScheduleRoute
 import com.notnex.myday.ui.navigation.toDayNoteRoute
 import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.ui.theme.RatingBar
+import com.notnex.myday.ui.theme.ratingColor
 import com.notnex.myday.viewmodel.MyDayViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.time.temporal.WeekFields
+import kotlin.time.Duration.Companion.seconds
 
 // Полоса недель: 5 недель назад, текущая и 4 вперёд.
 private const val WEEKS_BACK = 5
@@ -101,6 +109,12 @@ fun SharedTransitionScope.MainScreen(
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
 
     val openSettings = { context.startActivity(Intent(context, Settings::class.java)) }
+    val now by produceState(LocalTime.now()) {
+        while (true) {
+            delay(60.seconds)
+            value = LocalTime.now()
+        }
+    }
 
     SideMenu(
         drawerState = drawerState,
@@ -109,67 +123,108 @@ fun SharedTransitionScope.MainScreen(
             openSettings()
         },
     ) {
-        Scaffold(
-            topBar = {
-                MainTopBar(
-                    avatarUrl = authState.user?.profilePictureUrl,
-                    onMenuClick = {
-                        scope.launch {
-                            if (drawerState.isClosed) drawerState.open() else drawerState.close()
-                        }
-                    },
-                    onAccountClick = openSettings,
-                )
-            },
-            floatingActionButton = {
-                CustomFloatingActionButton(
-                    navController = navController,
-                    selectedDate = selectedDate,
-                    fabIcon = Icons.Default.Add
-                )
-            }
-        ) { innerPadding ->
-            Column(modifier = Modifier.padding(innerPadding)) {
-                WeekStrip(
-                    selectedDate = selectedDate,
-                    onDateSelected = myDayViewModel::setSelectedDate,
-                )
-
-                val note = day?.note.orEmpty()
-                ElevatedCard( // текст о дне
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(MyDayTheme.spacing.md)
-                        .sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = CARD_EXPLODE_BOUNDS_KEY
-                            ),
-                            animatedVisibilityScope = animatedVisibilityScope
+        Scaffold(topBar = {
+            MainTopBar(
+                avatarUrl = authState.user?.profilePictureUrl,
+                onMenuClick = {
+                    scope.launch {
+                        if (drawerState.isClosed) drawerState.open() else drawerState.close()
+                    }
+                },
+                onAccountClick = openSettings,
+            )
+        }, floatingActionButton = {
+            CustomFloatingActionButton(
+                navController = navController,
+                selectedDate = selectedDate,
+                fabIcon = Icons.Default.Add
+            )
+        }) { innerPadding ->
+            // Тема могла смениться, пока экран был в фоне (в настройках). Уже созданные элементы
+            // ленивого списка тогда не всегда получают новые цвета — часть карточек оставалась
+            // в старой теме. Ключ по палитре пересоздаёт список целиком; цена — прокрутка наверх.
+            key(MyDayTheme.palette) {
+                LazyColumn(modifier = Modifier.padding(innerPadding)) {
+                    item(key = "week") {
+                        WeekStrip(
+                            selectedDate = selectedDate,
+                            onDateSelected = myDayViewModel::setSelectedDate,
                         )
-                        .clickable { navController.navigate(selectedDate.toDayNoteRoute()) }
-                ) {
-                    Text(
-                        text = note.ifEmpty { stringResource(R.string.write_something) },
-                        color = if (note.isEmpty()) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(MyDayTheme.spacing.md),
-                        maxLines = 10
-                    )
+                    }
+                    val note = day?.note.orEmpty()
+                    val aiFeedback = day?.aiFeedback.orEmpty()
+                    item(key = "rating") {
+                        MainCard {
+                            DayRating(
+                                rating = day?.score ?: NOT_RATED,
+                                onRatingChanged = { myDayViewModel.setRating(selectedDate, it) },
+                            )
+                        }
+                    }
+                    item(key = "note") {
+                        MainCard(
+                            // У заголовка titleMedium высокая строка, над буквами уже есть воздух.
+                            topPadding = MyDayTheme.spacing.xs,
+                            modifier = Modifier
+                                .sharedBounds(
+                                    sharedContentState = rememberSharedContentState(
+                                        key = CARD_EXPLODE_BOUNDS_KEY
+                                    ), animatedVisibilityScope = animatedVisibilityScope
+                                )
+                                .clickable { navController.navigate(selectedDate.toDayNoteRoute()) },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.day_note_title),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                text = note.ifEmpty { stringResource(R.string.write_something) },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (note.isEmpty()) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = MyDayTheme.spacing.xs),
+                            )
+                        }
+                    }
+                    if (aiFeedback.isNotEmpty()) {
+                        item(key = "assistant") {
+                            MainCard(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                modifier = Modifier.clickable { navController.navigate(selectedDate.toDayNoteRoute()) },
+                            ) {
+                                Text(
+                                    text = "✦ " + stringResource(R.string.assistant_title),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                )
+                                Text(
+                                    text = aiFeedback.withoutMarkdown(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(top = MyDayTheme.spacing.xs),
+                                )
+                            }
+                        }
+                    }
+                    item {
+                        Text(
+                            modifier = Modifier.padding(
+                                start = MyDayTheme.spacing.md, end = MyDayTheme.spacing.md
+                            ),
+                            text = stringResource(R.string.schedule),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                    scheduleItems(
+                        date = selectedDate,
+                        time = now,
+                        schedule = schedule,
+                        onItemClick = { navController.navigate(EditScheduleRoute(it.id)) })
                 }
-
-                DayRating(
-                    rating = day?.score ?: NOT_RATED,
-                    onRatingChanged = { myDayViewModel.setRating(selectedDate, it) },
-                )
-
-                ScheduleList(
-                    schedule = schedule,
-                    onItemClick = { navController.navigate(EditScheduleRoute(it.id)) },
-                )
             }
         }
     }
@@ -185,19 +240,16 @@ private fun MainTopBar(
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.background
-        ),
-        title = {
+        ), title = {
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.titleLarge
             )
-        },
-        navigationIcon = { // кнопка бокового меню
+        }, navigationIcon = { // кнопка бокового меню
             IconButton(onClick = onMenuClick) {
                 Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu))
             }
-        },
-        actions = { // аккаунт: фото профиля или значок-заглушка
+        }, actions = { // аккаунт: фото профиля или значок-заглушка
             IconButton(onClick = onAccountClick) {
                 if (avatarUrl != null) {
                     AsyncImage(
@@ -216,8 +268,7 @@ private fun MainTopBar(
                     )
                 }
             }
-        }
-    )
+        })
 }
 
 /** Листаемая полоса недель; нажатие на день выбирает его. */
@@ -243,9 +294,11 @@ private fun WeekStrip(
     HorizontalPager(state = pagerState, modifier = modifier) { page ->
         val weekStart = firstWeekStart.plusWeeks(page.toLong())
         // Равные ячейки (weight) — «таблетка» выбранного дня одной ширины в любом месте недели.
-        Row(modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = MyDayTheme.spacing.sm)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MyDayTheme.spacing.sm)
+        ) {
             for (offset in 0L..6L) {
                 val date = weekStart.plusDays(offset)
                 DayCell(
@@ -299,50 +352,176 @@ private fun RowScope.DayCell(
     }
 }
 
+/**
+ * Содержимое карточки оценки: подпись, звёзды и оценка цифрой справа. Сама карточка —
+ * MainCard снаружи, поэтому здесь нет ни фона, ни внешних отступов.
+ */
 @Composable
 private fun DayRating(
     rating: Double,
     onRatingChanged: (Double) -> Unit,
 ) {
-    Box(
+    Text(
+        text = stringResource(R.string.how_day_gone),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .padding(MyDayTheme.spacing.md)
-            .fillMaxWidth(),
-        contentAlignment = Alignment.Center
+            .fillMaxWidth()
+            .padding(top = MyDayTheme.spacing.xs),
     ) {
+        // weight(1f) у звёзд: они занимают всё свободное место, и цифра уходит к правому краю.
         RatingBar(
-            modifier = Modifier.size(50.dp),
+            modifier = Modifier.weight(1f),
             rating = rating,
             onRatingChanged = onRatingChanged,
-            starsColor = when {
-                !rating.isRated -> MaterialTheme.colorScheme.outline
-                rating >= 4.0 -> Color.Green
-                rating >= 2.5 -> colorResource(R.color.orange)
-                else -> Color.Red
-            }
+            starsColor = MyDayTheme.palette.ratingColor(rating)
+                ?: MaterialTheme.colorScheme.outlineVariant
+        )
+        Text(
+            // Целая оценка без «.0»: «4», а не «4.0»; не оценено — прочерк.
+            text = when {
+                !rating.isRated -> "—"
+                rating % 1.0 == 0.0 -> rating.toInt().toString()
+                else -> rating.toString()
+            },
+            style = MaterialTheme.typography.headlineSmall,
         )
     }
 }
 
-@Composable
-private fun ScheduleList(
+private fun LazyListScope.scheduleItems(
+    date: LocalDate,
+    time: LocalTime,
     schedule: List<ScheduleEntity>,
-    onItemClick: (ScheduleEntity) -> Unit,
-    modifier: Modifier = Modifier,
+    onItemClick: (ScheduleEntity) -> Unit
 ) {
-    LazyColumn(modifier = modifier) {
-        items(items = schedule, key = { it.id }) { item ->
-            Card(
+    val today = LocalDate.now()
+    val currentIndex = schedule.indexOfLast { !it.time.isAfter(time) }
+    if (schedule.isEmpty()) {
+        item {
+            Text(
+                modifier = Modifier.padding(
+                    start = MyDayTheme.spacing.md,
+                    end = MyDayTheme.spacing.md,
+                    top = MyDayTheme.spacing.xs,
+                    bottom = MyDayTheme.spacing.xs
+                ),
+                text = stringResource(R.string.schedule_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    } else {
+        itemsIndexed(schedule, key = { index, item -> item.id }) { index, item ->
+            val state = when {
+                date.isBefore(today) -> ItemState.Past
+                date.isAfter(today) -> ItemState.Future
+                index < currentIndex -> ItemState.Past
+                index == currentIndex -> ItemState.Present
+                else -> ItemState.Future
+            }
+
+            val dotColor = when (state) {
+                ItemState.Past -> MaterialTheme.colorScheme.outlineVariant
+                ItemState.Present -> MaterialTheme.colorScheme.primaryContainer
+                ItemState.Future -> MaterialTheme.colorScheme.outline
+            }
+            val dotSize = if (state == ItemState.Present) 14.dp else 10.dp
+            val boldTime = if (state == ItemState.Present) FontWeight.Bold else FontWeight.Normal
+            val boldText =
+                if (state == ItemState.Present) FontWeight.SemiBold else FontWeight.Normal
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
+                    .height(IntrinsicSize.Min)
                     .fillMaxWidth()
-                    .padding(MyDayTheme.spacing.xxs)
-                    .clickable { onItemClick(item) }
-            ) {
+                    .padding(start = MyDayTheme.spacing.md, end = MyDayTheme.spacing.md)
+                    .clickable { onItemClick(item) }) {
                 Text(
-                    text = "${item.time.format(TIME_FORMAT)} — ${item.scheduleItem}",
-                    modifier = Modifier.padding(MyDayTheme.spacing.md)
+                    text = item.time.format(TIME_FORMAT),
+                    modifier = Modifier.width(56.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = boldTime,
+                    textAlign = TextAlign.Center
                 )
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        Modifier.fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(if (index == 0) Color.Transparent else MaterialTheme.colorScheme.outlineVariant)
+                                .width(2.dp)
+
+
+                        )
+                        Box(
+                            Modifier
+                                .size(dotSize)
+                                .clip(CircleShape)
+                                .background(dotColor)
+
+                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(if (index == schedule.lastIndex) Color.Transparent else MaterialTheme.colorScheme.outlineVariant)
+                                .width(2.dp)
+
+
+                        )
+                    }
+                }
+                Text(
+                    text = item.scheduleItem,
+                    modifier = Modifier
+                        .padding(
+                            top = MyDayTheme.spacing.sm,
+                            bottom = MyDayTheme.spacing.sm,
+                            start = MyDayTheme.spacing.xs,
+                            end = MyDayTheme.spacing.xs
+                        )
+                        .weight(1f),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = boldText
+                )
+                if (state == ItemState.Present) {
+                    Box(
+                        Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .padding(start = MyDayTheme.spacing.sm,
+                                end = MyDayTheme.spacing.sm,
+                                top = MyDayTheme.spacing.xxs,
+                                bottom = MyDayTheme.spacing.xxs)
+
+                    ) {
+                        Text(
+                            stringResource(R.string.now),
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
             }
         }
     }
 }
+
+// Нейросеть отвечает с разметкой Markdown; в превью из трёх строк звёздочки и решётки — мусор.
+private fun String.withoutMarkdown(): String =
+    replace(Regex("[*_`#]+"), "").replace(Regex("\\s+"), " ").trim()
+
+enum class ItemState { Past, Present, Future }

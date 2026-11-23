@@ -69,10 +69,10 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
  */
 @Composable
 fun MyDayTheme(
+    style: ThemeStyle = ThemeStyle.Default,
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    val style = ThemeStyle.Default
     val palette = style.palette(darkTheme)
     val colorScheme = remember(palette, darkTheme) { palette.toColorScheme(darkTheme) }
 

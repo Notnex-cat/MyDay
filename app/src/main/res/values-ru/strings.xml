@@ -61,4 +61,10 @@
     <string name="theme_sunny">Солнечный</string>
     <string name="theme_dusk">Сумерки</string>
     <string name="theme_pine">Хвойный</string>
+    <string name="theme_style">Тема оформления</string>
+    <string name="day_note_title">Заметка</string>
+    <string name="assistant_title">Ассистент</string>
+    <string name="schedule">Расписание</string>
+    <string name="now">Сейчас</string>
+    <string name="schedule_empty">На этот день планов нет. Нажмите «+», чтобы добавить</string>
 </resources>

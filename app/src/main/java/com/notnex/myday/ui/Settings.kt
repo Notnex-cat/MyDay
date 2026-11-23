@@ -16,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.notnex.myday.auth.AuthViewModel
+import com.notnex.myday.data.SettingsRepository
 import com.notnex.myday.ui.navigation.AiSettingsRoute
 import com.notnex.myday.ui.navigation.AuthRoute
 import com.notnex.myday.ui.navigation.SettingsRoute
@@ -26,14 +27,21 @@ import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.viewmodel.AiSettingsViewModel
 import com.notnex.myday.viewmodel.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class Settings : ComponentActivity() {
+
+
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyDayTheme {
+            val appTheme by settingsRepository.appTheme.collectAsStateWithLifecycle(initialValue = null)
+            val style = appTheme ?: return@setContent
+            MyDayTheme(style = style) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

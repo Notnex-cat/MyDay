@@ -62,4 +62,10 @@
     <string name="theme_sunny">Sunny</string>
     <string name="theme_dusk">Dusk</string>
     <string name="theme_pine">Pine</string>
+    <string name="theme_style">Theme</string>
+    <string name="day_note_title">Note</string>
+    <string name="assistant_title">Assistant</string>
+    <string name="schedule">Schedule</string>
+    <string name="now">Now</string>
+    <string name="schedule_empty">There are no plans for this day. Click “+” to add.</string>
 </resources>

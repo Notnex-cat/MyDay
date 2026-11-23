@@ -6,6 +6,7 @@ import com.notnex.myday.data.AiSettingsRepository
 import com.notnex.myday.data.SettingsRepository
 import com.notnex.myday.notification.ReminderScheduler
 import com.notnex.myday.notification.ReminderType
+import com.notnex.myday.ui.theme.ThemeStyle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -21,24 +22,25 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val repository: SettingsRepository,
     private val aiSettingsRepository: AiSettingsRepository,
-    private val reminderScheduler: ReminderScheduler
+    private val reminderScheduler: ReminderScheduler,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    val dayNoteTime = repository.reminderTime(ReminderType.DAY_NOTE)
-    val dayNoteEnabled = repository.reminderEnabled(ReminderType.DAY_NOTE)
+    val dayNoteTime = settingsRepository.reminderTime(ReminderType.DAY_NOTE)
+    val dayNoteEnabled = settingsRepository.reminderEnabled(ReminderType.DAY_NOTE)
 
-    val bedtimeTime = repository.reminderTime(ReminderType.BEDTIME)
-    val bedtimeEnabled = repository.reminderEnabled(ReminderType.BEDTIME)
+    val bedtimeTime = settingsRepository.reminderTime(ReminderType.BEDTIME)
+    val bedtimeEnabled = settingsRepository.reminderEnabled(ReminderType.BEDTIME)
 
     val aiEnabled = aiSettingsRepository.aiEnabled
-
     val selectedAi = aiSettingsRepository.provider
+
+    val selectedTheme = settingsRepository.appTheme
 
     fun enableReminder(time: LocalTime, type: ReminderType) {
         viewModelScope.launch {
-            repository.saveReminderTime(type, time)
+            settingsRepository.saveReminderTime(type, time)
             reminderScheduler.scheduleNext(type, time)
         }
     }
@@ -47,7 +49,7 @@ class SettingsViewModel @Inject constructor(
     // уже увидит «выключено» и не поставит новый.
     fun disableReminder(type: ReminderType) {
         viewModelScope.launch {
-            repository.disableReminder(type)
+            settingsRepository.disableReminder(type)
             reminderScheduler.cancelReminder(type)
         }
     }
@@ -63,4 +65,9 @@ class SettingsViewModel @Inject constructor(
         .flatMapLatest { provider -> aiSettingsRepository.apiKey(provider) }
         .map { key -> key != null }
 
+    fun setTheme(seletedTheme: ThemeStyle){
+        viewModelScope.launch {
+            settingsRepository.changeTheme(seletedTheme)
+        }
+    }
 }

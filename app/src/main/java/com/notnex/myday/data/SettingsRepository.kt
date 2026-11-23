@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.notnex.myday.notification.ReminderType
+import com.notnex.myday.ui.theme.ThemeStyle
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -16,9 +18,11 @@ import javax.inject.Singleton
 private fun minutesKey(type: ReminderType) = intPreferencesKey("${type.keyPrefix}_minutes")
 private fun enabledKey(type: ReminderType) = booleanPreferencesKey("${type.keyPrefix}_enabled")
 
+private val selectedTheme = stringPreferencesKey("appTheme")
+
 /**
  * Настройки напоминаний. Отсюда их читают экран настроек, планировщик и оба приёмника:
- * время напоминания хранится только здесь.
+ * время напоминания хранится только здесь, тут хранится и выбранная тема.
  */
 @Singleton
 class SettingsRepository @Inject constructor(
@@ -47,5 +51,16 @@ class SettingsRepository @Inject constructor(
         context.dataStore.edit { prefs ->
             prefs[enabledKey(type)] = false
         }
+    }
+
+    suspend fun changeTheme(theme: ThemeStyle) {
+        context.dataStore.edit { prefs ->
+            prefs[selectedTheme] = theme.name
+        }
+    }
+
+    val appTheme: Flow<ThemeStyle> = context.dataStore.data.map { prefs ->
+        val themeApp: String? = prefs[selectedTheme]
+        ThemeStyle.fromName(themeApp)
     }
 }

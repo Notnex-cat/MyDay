@@ -61,6 +61,7 @@ import com.notnex.myday.notification.ReminderType
 import com.notnex.myday.ui.navigation.AiSettingsRoute
 import com.notnex.myday.ui.navigation.AuthRoute
 import com.notnex.myday.ui.theme.MyDayTheme
+import com.notnex.myday.ui.theme.ThemeStyle
 import com.notnex.myday.viewmodel.SettingsViewModel
 import java.time.LocalTime
 
@@ -90,6 +91,8 @@ fun SettingsScreen(
     val aiEnabled by settingsViewModel.aiEnabled.collectAsStateWithLifecycle(false)
     val hasApiKey by settingsViewModel.hasApiKey.collectAsStateWithLifecycle(true)
     val aiKeyMissing = aiEnabled && !hasApiKey
+
+    val style by settingsViewModel.selectedTheme.collectAsStateWithLifecycle(ThemeStyle.Default)
 
     // Разрешение на уведомления спрашиваем в момент включения напоминания: тут человеку понятно,
     // зачем оно нужно. Ответ не обрабатываем — при отказе напоминание просто промолчит,
@@ -271,7 +274,11 @@ fun SettingsScreen(
                 onClick = { navController.navigate(AiSettingsRoute) },
                 onEnabledChange = { isOn -> settingsViewModel.enableAI(isOn) },
             )
+
+            ThemePicker(
+                selected = style,
+                onSelect = settingsViewModel::setTheme,
+            )
         }
     }
 }
-
