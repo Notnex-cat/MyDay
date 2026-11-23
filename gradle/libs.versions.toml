@@ -1,5 +1,5 @@
 [versions]
-agp = "9.5.1"
+agp = "9.5.2"
 coilCompose = "2.7.0"
 firebaseAuthKtx = "23.2.1"
 firebaseFirestoreKtx = "25.1.4"
@@ -18,7 +18,7 @@ datastorePreferences = "1.2.1"
 tinkAndroid = "1.24.0"
 navigationCompose = "2.9.3"
 junit = "4.13.2"
-ksp = "2.2.10-2.0.2"
+ksp = "2.3.6"
 googleGmsGoogleServices = "4.4.3"
 
 [libraries]
