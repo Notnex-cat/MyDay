@@ -22,12 +22,10 @@ import androidx.navigation.toRoute
 import com.notnex.myday.data.SettingsRepository
 import com.notnex.myday.ui.navigation.DAY_DEEP_LINK
 import com.notnex.myday.ui.navigation.DayNoteRoute
-import com.notnex.myday.ui.navigation.EditScheduleRoute
 import com.notnex.myday.ui.navigation.MainRoute
 import com.notnex.myday.ui.navigation.ScheduleRoute
 import com.notnex.myday.ui.navigation.toLocalDateOrToday
 import com.notnex.myday.ui.screens.mainactivity.DayNote
-import com.notnex.myday.ui.screens.mainactivity.EditScheduleScreen
 import com.notnex.myday.ui.screens.mainactivity.MainScreen
 import com.notnex.myday.ui.screens.mainactivity.ScheduleScreen
 import com.notnex.myday.ui.theme.MyDayTheme
@@ -81,12 +79,6 @@ class MainActivity : ComponentActivity() {
                                 ScheduleScreen(
                                     navController = navController,
                                     date = entry.toRoute<ScheduleRoute>().date.toLocalDateOrToday()
-                                )
-                            }
-                            composable<EditScheduleRoute> { entry ->
-                                EditScheduleScreen(
-                                    navController = navController,
-                                    id = entry.toRoute<EditScheduleRoute>().id
                                 )
                             }
                         }

@@ -18,9 +18,6 @@ data class DayNoteRoute(val date: String)
 data class ScheduleRoute(val date: String)
 
 @Serializable
-data class EditScheduleRoute(val id: String)
-
-@Serializable
 data object SettingsRoute
 
 @Serializable

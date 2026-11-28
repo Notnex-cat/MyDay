@@ -58,8 +58,6 @@ class MyDayRepository @Inject constructor(
 
     suspend fun getSchedule(date: LocalDate): List<ScheduleEntity> = scheduleDao.getByDate(date)
 
-    suspend fun getScheduleItem(id: String): ScheduleEntity? = scheduleDao.getById(id)
-
     // ---------- День ----------
 
     suspend fun saveNote(date: LocalDate, note: String) = updateDay(date) { copy(note = note) }

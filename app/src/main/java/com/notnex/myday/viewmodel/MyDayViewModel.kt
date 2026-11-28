@@ -13,8 +13,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.onStart
@@ -59,8 +59,6 @@ class MyDayViewModel @Inject constructor(
     suspend fun getDay(date: LocalDate): MyDayEntity? = repository.getDay(date)
 
     suspend fun getSchedule(date: LocalDate): List<ScheduleEntity> = repository.getSchedule(date)
-
-    suspend fun getScheduleItem(id: String): ScheduleEntity? = repository.getScheduleItem(id)
 
     fun setRating(date: LocalDate, score: Double) {
         viewModelScope.launch { repository.saveRating(date, score) }

@@ -40,9 +40,12 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,7 +70,6 @@ import com.notnex.myday.data.TIME_FORMAT
 import com.notnex.myday.data.isRated
 import com.notnex.myday.ui.CARD_EXPLODE_BOUNDS_KEY
 import com.notnex.myday.ui.Settings
-import com.notnex.myday.ui.navigation.EditScheduleRoute
 import com.notnex.myday.ui.navigation.toDayNoteRoute
 import com.notnex.myday.ui.theme.MyDayTheme
 import com.notnex.myday.ui.theme.RatingBar
@@ -115,6 +117,8 @@ fun SharedTransitionScope.MainScreen(
             value = LocalTime.now()
         }
     }
+
+    var editingId by rememberSaveable { mutableStateOf<String?>(null) }
 
     SideMenu(
         drawerState = drawerState,
@@ -223,10 +227,32 @@ fun SharedTransitionScope.MainScreen(
                         date = selectedDate,
                         time = now,
                         schedule = schedule,
-                        onItemClick = { navController.navigate(EditScheduleRoute(it.id)) })
+                        onItemClick = { editingId = it.id })
                 }
             }
         }
+    }
+
+
+    editingId?.let { id ->
+        val item = schedule.find { it.id == id }
+        if (item != null) {
+            ScheduleItemSheet(
+                title = stringResource(R.string.edit_schedule_item),
+                name = item.scheduleItem,
+                initialTime = item.time,
+                initialNote = item.note,
+                onSave = { newName, newTime, newNote ->
+                    myDayViewModel.updateScheduleItem(item.id, newName, newTime, newNote)
+                    editingId = null
+                },
+                onDismiss = { editingId = null },
+                onDelete = { myDayViewModel.deleteScheduleItem(item.id)
+                    editingId = null
+                }
+            )
+        }
+
     }
 }
 
@@ -500,10 +526,12 @@ private fun LazyListScope.scheduleItems(
                         Modifier
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.secondaryContainer)
-                            .padding(start = MyDayTheme.spacing.sm,
+                            .padding(
+                                start = MyDayTheme.spacing.sm,
                                 end = MyDayTheme.spacing.sm,
                                 top = MyDayTheme.spacing.xxs,
-                                bottom = MyDayTheme.spacing.xxs)
+                                bottom = MyDayTheme.spacing.xxs
+                            )
 
                     ) {
                         Text(
