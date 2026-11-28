@@ -1,7 +1,7 @@
 package com.notnex.myday.auth
 
 import android.content.Context
-import com.google.android.gms.auth.api.identity.Identity
+import androidx.credentials.CredentialManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,7 +18,6 @@ object AuthModule {
     fun provideAuthRepository(
         @ApplicationContext context: Context
     ): AuthRepository {
-        val client = Identity.getSignInClient(context)
-        return AuthRepository(client)
+        return AuthRepository(CredentialManager.create(context))
     }
 }

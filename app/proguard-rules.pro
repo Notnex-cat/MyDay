@@ -23,3 +23,10 @@
 # Firestore маппит документы в DTO через рефлексию по именам полей — R8 не должен их переименовывать.
 -keep class com.notnex.myday.data.remote.MyDayFirebaseDTO { *; }
 -keep class com.notnex.myday.data.remote.MyScheduleFirebaseDTO { *; }
+
+# Credential Manager находит поставщика из сервисов Google Play через рефлексию — без этого
+# в релизной сборке R8 вырежет его, и вход через Google перестанет работать.
+-if class androidx.credentials.CredentialManager
+-keep class androidx.credentials.playservices.** {
+  *;
+}

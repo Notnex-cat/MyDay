@@ -1,10 +1,7 @@
 package com.notnex.myday.ui.screens.settingsactivity
 
-import android.app.Activity
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,14 +42,22 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.credentials.Credential
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.google.android.gms.auth.api.identity.BeginSignInRequest
-import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.notnex.myday.R
 import com.notnex.myday.auth.AuthViewModel
 import com.notnex.myday.ui.theme.MyDayTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
@@ -62,20 +68,13 @@ fun AuthScreen(
     val emailState = rememberSaveable { mutableStateOf("") }
     val passwordState = remember { mutableStateOf("") }
     val context = LocalContext.current
-    val oneTapClient = remember { Identity.getSignInClient(context) }
+    // Окно выбора аккаунта Google показывается поверх активити, поэтому нужна она, а не контекст приложения.
+    val activity = LocalActivity.current
+    val scope = rememberCoroutineScope()
+    val credentialManager = remember(context) { CredentialManager.create(context) }
     //val auth = remember { Firebase.auth }
 
     val focusManager = LocalFocusManager.current
-
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult(),
-        onResult = { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                val intent = result.data ?: return@rememberLauncherForActivityResult
-                authViewModel.signInWithGoogle(intent)
-            }
-        }
-    )
 
     // Синхронизацией занимается SyncManager по факту входа — экрану остаётся только вернуться назад
     LaunchedEffect(authState.isAuthenticated) {
@@ -152,25 +151,30 @@ fun AuthScreen(
             Spacer(modifier = Modifier.height(MyDayTheme.spacing.sm))
 
             Button(onClick = {
-                oneTapClient.beginSignIn(
-                    BeginSignInRequest.Builder()
-                        .setGoogleIdTokenRequestOptions(
-                            BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
-                                .setSupported(true)
-                                .setFilterByAuthorizedAccounts(false)
-                                .setServerClientId(context.getString(R.string.web_client_id))
+                val host = activity ?: return@Button
+                scope.launch {
+                    try {
+                        val result = credentialManager.getCredential(
+                            host,
+                            GetCredentialRequest.Builder()
+                                .addCredentialOption(
+                                    GetSignInWithGoogleOption.Builder(context.getString(R.string.web_client_id)).build()
+                                )
                                 .build()
                         )
-                        .setAutoSelectEnabled(true)
-                        .build()
-                ).addOnSuccessListener { result ->
-                    launcher.launch(
-                        IntentSenderRequest.Builder(result.pendingIntent.intentSender).build()
-                    )
-                }.addOnFailureListener {
-                    // Чаще всего на телефоне нет аккаунта Google или сервисов Google Play.
-                    // Без обработчика кнопка молча не делала бы ничего.
-                    Toast.makeText(context, R.string.google_sign_in_error, Toast.LENGTH_LONG).show()
+                        val idToken = result.credential.googleIdTokenOrNull()
+                        if (idToken != null) {
+                            authViewModel.signInWithGoogle(idToken)
+                        } else {
+                            Toast.makeText(context, R.string.google_sign_in_error, Toast.LENGTH_LONG).show()
+                        }
+                    } catch (e: GetCredentialCancellationException) {
+                        // Человек сам закрыл окно выбора аккаунта — это не ошибка.
+                    } catch (e: GetCredentialException) {
+                        // Чаще всего на телефоне нет аккаунта Google или сервисов Google Play.
+                        // Без сообщения кнопка молча не делала бы ничего.
+                        Toast.makeText(context, R.string.google_sign_in_error, Toast.LENGTH_LONG).show()
+                    }
                 }
             },
                 shape = RoundedCornerShape(12.dp),
@@ -196,5 +200,15 @@ fun AuthScreen(
                 }
             }
         }
+    }
+}
+
+/** Токен Google из ответа Credential Manager; null, если пришло что-то другое или ответ не разобрать. */
+private fun Credential.googleIdTokenOrNull(): String? {
+    if (this !is CustomCredential || type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) return null
+    return try {
+        GoogleIdTokenCredential.createFrom(data).idToken
+    } catch (e: GoogleIdTokenParsingException) {
+        null
     }
 }

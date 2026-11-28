@@ -1,6 +1,5 @@
 package com.notnex.myday.auth
 
-import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,10 +22,12 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch { repo.signUpWithEmail(email, password) }
     }
 
-    fun signInWithGoogle(intent: Intent) {
-        viewModelScope.launch { repo.signInWithGoogle(intent) }
+    fun signInWithGoogle(idToken: String) {
+        viewModelScope.launch { repo.signInWithGoogle(idToken) }
     }
 
-    fun signOut() = repo.signOut()
+    fun signOut() {
+        viewModelScope.launch { repo.signOut() }
+    }
     fun clearError() = repo.clearError()
 } 

@@ -109,7 +109,10 @@ dependencies {
 
     //firebase
     implementation(libs.firebase.auth)
-    implementation(libs.play.services.auth)
+    // Вход через Google: Credential Manager вместо устаревшего One Tap.
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
     implementation(libs.firebase.firestore)
 
     //coil

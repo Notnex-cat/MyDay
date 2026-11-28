@@ -1,9 +1,9 @@
 package com.notnex.myday.auth
 
-import android.content.Intent
-import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.CancellationException
@@ -20,7 +20,7 @@ data class AuthState(
 )
 
 class AuthRepository(
-    private val oneTapClient: SignInClient
+    private val credentialManager: CredentialManager,
 ) {
     private val auth = Firebase.auth
     private val _authState = MutableStateFlow(stateFor(auth.currentUser))
@@ -49,15 +49,24 @@ class AuthRepository(
         auth.createUserWithEmailAndPassword(email, password).await()
     }
 
-    suspend fun signInWithGoogle(intent: Intent) = authenticate {
-        val credential = oneTapClient.getSignInCredentialFromIntent(intent)
-        val googleCredentials = GoogleAuthProvider.getCredential(credential.googleIdToken, null)
+    /** Вход в Firebase по токену Google, который экран получил от Credential Manager. */
+    suspend fun signInWithGoogle(idToken: String) = authenticate {
+        val googleCredentials = GoogleAuthProvider.getCredential(idToken, null)
         auth.signInWithCredential(googleCredentials).await()
     }
 
-    fun signOut() {
+    suspend fun signOut() {
         auth.signOut()
         _authState.update { it.copy(error = null) }
+        // Забываем выбранный аккаунт Google: иначе следующий вход молча подставил бы прежний,
+        // и сменить аккаунт было бы нельзя.
+        try {
+            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Не удалось — не страшно: из Firebase человек уже вышел.
+        }
     }
 
     fun clearError() {
